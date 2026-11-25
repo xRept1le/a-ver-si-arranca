@@ -41,5 +41,7 @@ export interface Capitulo {
   titulo: string;
   legible: boolean;
   temaId?: string;
+  /** Muestra el acceso al catálogo de señales del dosier. */
+  catalogoSenales?: boolean;
   apartados: Apartado[];
 }

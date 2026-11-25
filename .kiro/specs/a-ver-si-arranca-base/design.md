@@ -80,6 +80,15 @@ Las cifras de Progreso se derivan de `respuestas`, `nivelesCompletados` y `simul
 - Simulacro demo: 6 preguntas, 3 minutos. Corte de aprobado demo: como máximo 1 fallo. No se presenta como el formato oficial.
 - Sin enlaces a fuentes oficiales salvo que la URL concreta se haya comprobado.
 
+### Catálogo de señales
+
+- Fuente: «Catálogo de señales de circulación» (MOPT), PDF facilitado por el usuario en dos partes (`1110950_1-1-45.pdf`, `1110950_1-46-99.pdf`). Se omiten las páginas 1–8 de la primera parte, las portadas de sección y la contraportada.
+- 412 entradas: 51 de peligro, 77 de reglamentación, 215 de indicación y 69 pictogramas. Los tipos siguen las cabeceras del dosier; los seis tipos de orientación llevan el subgrupo «Orientación».
+- Las imágenes son recortes del PDF en WebP (lado máximo 320 px, 2,4 MB en total) en `assets/senales/`. Los textos se transcribieron leyendo cada página; nada está escrito de memoria.
+- Contenido en `src/content/senales/`: `tipos.ts` y `index.ts` a mano (familias, tipos, fuente); `datos.ts` e `imagenes.ts` generados por `herramientas/senales/`.
+- Rutas: `/temario/catalogo-senales` (índice por familia y tipo) y `/temario/catalogo-senales/[tipo]` (rejilla). La ficha de cada señal es un modal con «Anterior» y «Siguiente» dentro del tipo.
+- La edición del catálogo es antigua: algunas señales pueden haber cambiado. Se indica en la propia pantalla.
+
 ## Identidad visual
 
 - Fondo `#0B0B0C`, superficies `#16171A` / `#202227`, texto `#F2F2F3` / `#A0A3AB`, acento azul `#3B82F6`.

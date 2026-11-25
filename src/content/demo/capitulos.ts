@@ -13,6 +13,7 @@ export const capitulos: Capitulo[] = [
     titulo: 'Señales y marcas viales',
     legible: false,
     temaId: 'senales',
+    catalogoSenales: true,
     apartados: [
       { id: 'formas', titulo: 'Formas y colores de las señales', parrafos: [] },
       { id: 'orden-prioridad', titulo: 'Orden de prioridad entre señales', parrafos: [] },

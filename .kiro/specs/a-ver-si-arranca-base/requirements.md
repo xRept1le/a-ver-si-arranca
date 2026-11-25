@@ -58,6 +58,7 @@ Al comprobar se muestra: resultado (icono + texto «Correcto» / «Incorrecto»)
 - CA3.1 Índice de capítulos del permiso B marcado como provisional; solo el capítulo de demostración se puede abrir; el resto indica «Próximamente».
 - CA3.2 El capítulo de demostración se lee por apartados con anclas.
 - CA3.3 «Practicar este tema» abre la lección asociada si está disponible o completada; si está bloqueada, indica qué nivel falta.
+- CA3.4 El capítulo «Señales y marcas viales» da acceso a un catálogo con todas las señales del dosier del usuario (`1110950_1.pdf`, sin las páginas 1–8 de la parte 1-45). Las señales se agrupan por familia y tipo, en el orden del dosier. Cada una muestra código, imagen y nombre, y al pulsarla se abre su descripción. El catálogo cita la fuente y está marcado como pendiente de revisión.
 
 **R4. Lección.**
 - CA4.1 Preguntas de tres opciones, sin límite de tiempo. Arriba hay un recuadro numerado por pregunta, como en el simulador, que marca la actual y el resultado de las ya respondidas (✓ verde, ✕ naranja).

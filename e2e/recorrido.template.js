@@ -157,6 +157,32 @@ async (pagina, log) => {
   await atras();
   await pulsar('capitulo-senales');
   await esperar('practicar-tema');
+
+  // Catálogo de señales
+  const FOTOS = '/projects/sandbox/.kiro/artifacts/screenshots/';
+  await pulsar('abrir-catalogo');
+  await esperar('pantalla-catalogo');
+  ok((await vis('familia-peligro').innerText()).includes('51 señales'), 'Catálogo: familia de peligro con 51 señales');
+  ok((await vis('tipo-pictogramas').innerText()).includes('69 señales'), 'Catálogo: pictogramas con 69 entradas');
+  ok(await visible('catalogo-fuente'), 'Catálogo: cita la fuente');
+  await page.screenshot({ path: FOTOS + 'catalogo-indice.png' });
+  await pulsar('tipo-peligro');
+  await esperar('senal-p-1');
+  await page.waitForFunction(() => [...document.querySelectorAll('img')].some((i) => i.src.includes('p-1') && i.naturalWidth > 0));
+  ok(true, 'Catálogo: la rejilla carga las imágenes de las señales');
+  await page.screenshot({ path: FOTOS + 'catalogo-peligro.png' });
+  await pulsar('senal-p-1');
+  await esperar('ficha-senal');
+  ok((await vis('ficha-nombre').innerText()) === 'Intersección con prioridad', 'Catálogo: la ficha muestra nombre y descripción');
+  await pulsar('ficha-siguiente');
+  ok((await vis('ficha-codigo').innerText()) === 'P-1a', 'Catálogo: «Siguiente» pasa a la señal siguiente');
+  await page.screenshot({ path: FOTOS + 'catalogo-ficha.png' });
+  await vis('ficha-senal').locator('[data-testid="boton-atras"]').click();
+  await vis('ficha-senal').waitFor({ state: 'hidden' });
+  await atras();
+  await esperar('pantalla-catalogo');
+  await atras();
+  await esperar('practicar-tema');
   await pulsar('practicar-tema');
   await esperar('sesion');
   ok((await preguntaId()) === 'sen1-16', 'Temario: «Practicar este tema» abre la lección disponible');

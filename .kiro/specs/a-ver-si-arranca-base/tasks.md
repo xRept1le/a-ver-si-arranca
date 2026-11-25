@@ -15,6 +15,7 @@ Cada tarea indica los criterios de aceptación (CA) de `requirements.md` que cub
 - [x] 11. Mis errores y Ajustes. · CA7.1–CA7.3, CA8.1–CA8.3
 - [x] 12. Comprobación final: `tsc`, Jest (18 pruebas), bundle de Android y recorrido web con Playwright (46 comprobaciones, `e2e/`).
 - [x] 13. Instrucciones para abrir en Android con Expo Go (README).
+- [x] 14. Catálogo de señales del dosier: transcripción, recortes, contenido generado, índice, rejilla por tipo y ficha. Recorrido web ampliado a 51 comprobaciones. · CA3.4
 
 ## Decisiones tomadas durante la implementación
 

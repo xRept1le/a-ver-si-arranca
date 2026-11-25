@@ -11,3 +11,5 @@ ios/
 expo-env.d.ts
 *.tsbuildinfo
 .metro-health-check*
+herramientas/senales/catalogo.json
+__pycache__/
