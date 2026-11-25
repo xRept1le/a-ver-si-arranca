@@ -223,6 +223,7 @@ async (pagina, log) => {
   // Simulacro entregado
   await pulsar('tab-simulador');
   await esperar('empezar-simulacro');
+  ok((await vis('pantalla-simulador').innerText()).includes('30:00 minutos'), 'Simulador: 30 minutos en total');
   await pulsar('empezar-simulacro');
   await esperar('pantalla-simulacro');
   ok(!(await visible('tab-inicio')), 'Simulacro: barra de pestañas oculta');
@@ -247,7 +248,10 @@ async (pagina, log) => {
   await pulsar('empezar-simulacro');
   await esperar('pantalla-simulacro');
   await pulsar('opcion-' + R[await preguntaId()]);
-  await page.clock.fastForward('15:05');
+  await page.clock.fastForward('29:00');
+  await page.waitForTimeout(400);
+  ok(!(await visible('tiempo-agotado')) && (await visible('pantalla-simulacro')), 'Simulacro: a los 29 minutos sigue en curso');
+  await page.clock.fastForward('01:05');
   await esperar('tiempo-agotado');
   ok(await visible('tiempo-agotado'), 'Tiempo agotado: se corrige automáticamente');
   ok((await vis('resultado-cifras').innerText()).startsWith('1 de 30'), 'Tiempo agotado: las no respondidas cuentan como fallo');

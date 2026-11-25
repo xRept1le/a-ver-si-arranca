@@ -44,6 +44,19 @@ export const PAISAJE = {
   ambar: '#C9A64A',
   verde: '#2E9E5B',
   blanco: '#F2F2F3',
+  /** Azul de las señales de orientación. */
+  azulSenal: '#1F55D6',
+  pueblo: '#13120E',
+  cal: '#8E8980',
+  calSombra: '#77726A',
+  zocalo: '#5E5A55',
+  madera: '#4A3628',
+  tierra: '#2B251B',
+  tejados: ['#7A3E2E', '#6E4635', '#5F4A3F'],
+  roca: '#1A1C1F',
+  rocaClara: '#24272B',
+  hormigon: '#4A4D55',
+  interiorTunel: '#050506',
 } as const;
 
 type Pieza = { x: number; y: number; s?: number; v?: number };
@@ -286,16 +299,161 @@ export function ArbolCiudad({ x, y, s }: Pieza) {
   );
 }
 
-/** Señal de entrada a poblado (fondo blanco, texto negro), sobre un poste. */
+/** Señal de entrada a poblado (S-500: fondo blanco, texto negro), sobre un poste. */
 export function EntradaPoblado({ x, y, nombre }: { x: number; y: number; nombre: string }) {
+  const w = Math.max(68, nombre.length * 7.4 + 16);
   return (
     <G transform={`translate(${x} ${y})`}>
       <Line x1={0} y1={0} x2={0} y2={-30} stroke={PAISAJE.farola} strokeWidth={3} />
-      <Rect x={-34} y={-58} width={68} height={30} rx={3} fill={PAISAJE.blanco} stroke={PAISAJE.oscuro} strokeWidth={2} />
+      <Rect x={-w / 2} y={-58} width={w} height={30} rx={3} fill={PAISAJE.blanco} stroke={PAISAJE.oscuro} strokeWidth={2} />
       <SvgText x={0} y={-39} fontSize={11} fontWeight="bold" fill="#111" textAnchor="middle">
         {nombre}
       </SvgText>
     </G>
+  );
+}
+
+/**
+ * Cartel de orientación sobre la calzada (fondo azul, orla blanca, identificador de vía,
+ * destino y flechas de carril), sostenido por dos postes que llegan al suelo en `ySuelo`.
+ */
+export function CartelOrientacion({
+  x,
+  y,
+  ySuelo,
+  ruta,
+  nombre,
+  separacion,
+}: {
+  x: number;
+  y: number;
+  ySuelo: number;
+  ruta: string;
+  nombre: string;
+  separacion: number;
+}) {
+  const w = 136;
+  const h = 64;
+  const chip = ruta.length * 8 + 10;
+  const flecha = (fx: number) => (
+    <Path
+      d={`M${fx},${y + h - 22} V${y + h - 9} M${fx - 6},${y + h - 15} L${fx},${y + h - 8} L${fx + 6},${y + h - 15}`}
+      stroke={PAISAJE.blanco}
+      strokeWidth={2.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
+    />
+  );
+  return (
+    <G>
+      <Rect x={x - separacion / 2 - 2} y={y + h - 4} width={4} height={ySuelo - y - h + 4} fill={PAISAJE.farola} />
+      <Rect x={x + separacion / 2 - 2} y={y + h - 4} width={4} height={ySuelo - y - h + 4} fill={PAISAJE.farola} />
+      <Rect x={x - w / 2} y={y} width={w} height={h} rx={8} fill={PAISAJE.azulSenal} />
+      <Rect x={x - w / 2 + 3} y={y + 3} width={w - 6} height={h - 6} rx={6} fill="none" stroke={PAISAJE.blanco} strokeWidth={1.6} />
+      <Rect x={x - chip / 2} y={y + 8} width={chip} height={16} fill="none" stroke={PAISAJE.blanco} strokeWidth={1.4} />
+      <SvgText x={x} y={y + 20.5} fontSize={11.5} fontWeight="bold" fill={PAISAJE.blanco} textAnchor="middle">
+        {ruta}
+      </SvgText>
+      <SvgText x={x} y={y + 41} fontSize={15} fontWeight="bold" fill={PAISAJE.blanco} textAnchor="middle">
+        {nombre}
+      </SvgText>
+      {flecha(x - 46)}
+      {flecha(x + 46)}
+    </G>
+  );
+}
+
+/**
+ * Ladera con la boca de un túnel en (x, yBoca), de la que sale la carretera de ancho `ancho`.
+ * Ocupa todo el ancho `W` desde y = 0.
+ */
+export function Tunel({ x, yBoca, ancho, W }: { x: number; yBoca: number; ancho: number; W: number }) {
+  const w = ancho + 20;
+  const h = 50;
+  const arco = (m: number) =>
+    `M${x - w / 2 + m},${yBoca} V${yBoca - h + w / 2} A${w / 2 - m},${w / 2 - m} 0 0 1 ${x + w / 2 - m},${yBoca - h + w / 2} V${yBoca} Z`;
+  const ladera = `M0,0 H${W} V${yBoca - 40} C${W * 0.86},${yBoca - 58} ${W * 0.72},${yBoca - 6} ${x + w / 2 + 26},${yBoca + 2} H${x - w / 2 - 26} C${W * 0.28},${yBoca - 6} ${W * 0.14},${yBoca - 64} 0,${yBoca - 34} Z`;
+  const pinos: [number, number, number][] = [
+    [0.06, -40, 0.8],
+    [0.13, -52, 0.6],
+    [0.24, -30, 0.7],
+    [0.71, -36, 0.65],
+    [0.84, -50, 0.85],
+    [0.93, -40, 0.6],
+  ];
+  return (
+    <G>
+      <Path d={ladera} fill={PAISAJE.roca} />
+      <Path
+        d={`M${W * 0.05},${yBoca - 48} q${W * 0.08},-10 ${W * 0.16},-2 M${W * 0.7},${yBoca - 44} q${W * 0.1},-12 ${W * 0.2},-4`}
+        stroke={PAISAJE.rocaClara}
+        strokeWidth={2}
+        fill="none"
+        strokeLinecap="round"
+      />
+      {pinos.map(([px, py, s]) => (
+        <Pino key={px} x={W * px} y={yBoca + py} s={s} />
+      ))}
+      <Path d={arco(0)} fill={PAISAJE.hormigon} />
+      <Path d={arco(5)} fill={PAISAJE.interiorTunel} />
+      {[0.2, 0.45, 0.7, 1].map((o, i) => (
+        <Rect key={o} x={x - ancho / 2 + 4} y={yBoca - 16 + i * 4} width={ancho - 8} height={4} fill={PAISAJE.asfalto} opacity={o} />
+      ))}
+      <Circle cx={x - 9} cy={yBoca - h + 16} r={1.8} fill={PAISAJE.luz} opacity={0.85} />
+      <Circle cx={x + 9} cy={yBoca - h + 16} r={1.8} fill={PAISAJE.luz} opacity={0.85} />
+    </G>
+  );
+}
+
+// ── Pueblo ────────────────────────────────────────────────────────────
+
+/** Casa encalada con tejado a cuatro aguas; ancho `w` y alto de fachada `h`. */
+export function CasaPueblo({ x, y, w, h, semilla }: { x: number; y: number; w: number; h: number; semilla: number }) {
+  const tejado = PAISAJE.tejados[semilla % PAISAJE.tejados.length];
+  const cubierta = Math.round(w * 0.32);
+  const puertaX = semilla % 2 === 0 ? -w / 4 : w / 4 - 6;
+  const ventanaX = semilla % 2 === 0 ? w / 4 - 3 : -w / 4 - 1;
+  const luz = azar(semilla * 13) > 0.6;
+  return (
+    <G transform={`translate(${x} ${y})`}>
+      <Rect x={-w / 2} y={-h} width={w} height={h} fill={PAISAJE.cal} />
+      <Rect x={-w / 2} y={-3} width={w} height={3} fill={PAISAJE.zocalo} />
+      <Polygon points={`${-w / 2 - 3},${-h} ${w / 2 + 3},${-h} ${w / 2 - 5},${-h - cubierta} ${-w / 2 + 5},${-h - cubierta}`} fill={tejado} />
+      {semilla % 3 === 0 ? <Rect x={w / 2 - 11} y={-h - cubierta - 4} width={4} height={8} fill={tejado} /> : null}
+      <Rect x={puertaX} y={-10} width={6} height={10} fill={PAISAJE.madera} />
+      <Rect x={ventanaX} y={-h + 4} width={5} height={5} fill={luz ? PAISAJE.ventana : PAISAJE.ventanaApagada} opacity={luz ? 0.75 : 1} />
+    </G>
+  );
+}
+
+/** Iglesia de pueblo con campanario. */
+export function Iglesia({ x, y, s, v = 1 }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <G transform={`scale(${v} 1)`}>
+        <Rect x={-18} y={-24} width={30} height={24} fill={PAISAJE.cal} />
+        <Polygon points="-20,-24 14,-24 9,-33 -15,-33" fill={PAISAJE.tejados[0]} />
+        <Path d="M-7,0 V-9 A4,4 0 0 1 1,-9 V0 Z" fill={PAISAJE.madera} />
+        <Rect x={12} y={-50} width={13} height={50} fill={PAISAJE.calSombra} />
+        <Polygon points="11,-50 26,-50 18.5,-61" fill={PAISAJE.tejados[0]} />
+        <Path d="M16.5,-44 V-38 h4 V-44 A2,2 0 0 0 16.5,-44 Z" fill={PAISAJE.oscuro} />
+        <Line x1={18.5} y1={-61} x2={18.5} y2={-68} stroke={PAISAJE.calSombra} strokeWidth={1.5} />
+        <Line x1={16} y1={-65.5} x2={21} y2={-65.5} stroke={PAISAJE.calSombra} strokeWidth={1.5} />
+      </G>
+    </En>
+  );
+}
+
+/** Huerto: bancales con hileras de plantas. */
+export function Huerto({ x, y, s }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <Rect x={-22} y={-16} width={44} height={16} rx={2} fill={PAISAJE.tierra} />
+      {[0, 1, 2].map((f) =>
+        [0, 1, 2, 3, 4].map((c) => <Circle key={`${f}-${c}`} cx={-16 + c * 8} cy={-12 + f * 5} r={2.2} fill={PAISAJE.copa} />),
+      )}
+    </En>
   );
 }
 
@@ -343,7 +501,10 @@ export type TipoPieza =
   | 'edificio'
   | 'farola'
   | 'semaforo'
-  | 'arbolCiudad';
+  | 'arbolCiudad'
+  | 'casaPueblo'
+  | 'iglesia'
+  | 'huerto';
 
 export interface PiezaColocada {
   tipo: TipoPieza;
@@ -371,6 +532,8 @@ interface Zona {
 export interface EntradaComposicion {
   ancho: number;
   alto: number;
+  /** y a partir de la cual empieza el pueblo, entre el campo y la ciudad. */
+  yPueblo: number;
   /** y a partir de la cual empieza la ciudad. */
   yCiudad: number;
   /** Puntos de paso de la carretera (tangente vertical en cada uno). */
@@ -395,10 +558,12 @@ function bezier(a: Punto, b: Punto, t: number): Punto {
 /**
  * Reparte el paisaje alrededor de la carretera de forma estable (misma salida para el mismo ancho).
  * El campo se compone con un campo de densidad: los árboles forman bosquecillos y enmarcan los bordes,
- * y en los claros aparecen pocos animales, separados entre sí. En la ciudad, los edificios siguen la calle.
+ * y en los claros aparecen pocos animales, separados entre sí. Le sigue un pueblo de casas encaladas
+ * y después la ciudad, cuyos edificios siguen la calle. Los cambios de zona y de tramo son graduales.
  */
 export function componerPaisaje(e: EntradaComposicion): PiezaColocada[] {
-  const { ancho: W, yCiudad, puntos, medio, reservas } = e;
+  const { ancho: W, yPueblo, yCiudad, puntos, medio, reservas } = e;
+  const entre = (v: number) => Math.min(1, Math.max(0, v));
 
   // Muestras de la carretera para medir distancias.
   const muestras: Punto[] = [];
@@ -425,12 +590,21 @@ export function componerPaisaje(e: EntradaComposicion): PiezaColocada[] {
     piezas.push(p);
     ocupados.push({ x: p.x, y: p.y, r });
   };
-  const caracterEn = (y: number) => e.tramos.find((t) => y >= t.y0 && y < t.y1)?.caracter ?? 'prado';
+  // Cerca del límite entre tramos se mezclan los dos caracteres, para que el cambio sea gradual.
+  const MEZCLA = 160;
+  const caracterEn = (y: number, r: number) => {
+    const i = e.tramos.findIndex((t) => y >= t.y0 && y < t.y1);
+    if (i < 0) return 'prado';
+    const t = e.tramos[i];
+    if (i > 0 && y - t.y0 < MEZCLA && r < 0.5 * (1 - (y - t.y0) / MEZCLA)) return e.tramos[i - 1].caracter;
+    if (i < e.tramos.length - 1 && t.y1 - y < MEZCLA && r < 0.5 * (1 - (t.y1 - y) / MEZCLA)) return e.tramos[i + 1].caracter;
+    return t.caracter;
+  };
 
   // 1. Animales y elementos singulares, pocos y separados: primero, para que los árboles los respeten.
   let semilla = 1;
   let ultimoAnimal = -Infinity;
-  for (let y = 120; y < yCiudad - 80; y += 46) {
+  for (let y = 120; y < yPueblo + 160; y += 46) {
     for (let intento = 0; intento < 3; intento++) {
       semilla++;
       if (y - ultimoAnimal < 300) break;
@@ -438,7 +612,8 @@ export function componerPaisaje(e: EntradaComposicion): PiezaColocada[] {
       const d = distancia(x, y);
       if (d < medio.campo + 46 || reservado(x, y, 30) || reservado(x, y - 50, 20) || !libre(x, y, 60)) continue;
       if (distancia(x, y - 50) < medio.campo + 30) continue;
-      const c = caracterEn(y);
+      if (y > yPueblo && d < medio.campo + 110) continue;
+      const c = y > yPueblo ? 'prado' : caracterEn(y, azar(semilla * 0.7));
       const v = (azar(semilla * 3.1) > 0.5 ? 1 : -1) as 1 | -1;
       const r = azar(semilla * 5.3);
       if (c === 'prado') {
@@ -474,10 +649,13 @@ export function componerPaisaje(e: EntradaComposicion): PiezaColocada[] {
       semilla++;
       const jx = x + (azar(semilla * 2.3) - 0.5) * 18;
       const jy = y + (azar(semilla * 4.1) - 0.5) * 18;
-      const c = caracterEn(jy);
+      const c = caracterEn(jy, azar(semilla * 9.7));
       const borde = Math.max(0, 1 - Math.min(jx, W - jx) / 70) * 0.35;
       const base = c === 'bosque' ? 0.12 : c === 'cultivo' ? -0.12 : -0.05;
-      const densidad = 0.5 + 0.5 * Math.sin(jx * 0.021 + fase1) * Math.cos(jy * 0.013 + fase2) + borde + base;
+      // En el pueblo hay menos árboles, y desaparecen al llegar a la ciudad.
+      const rural = entre((jy - yPueblo + 80) / 240);
+      const densidad =
+        0.5 + 0.5 * Math.sin(jx * 0.021 + fase1) * Math.cos(jy * 0.013 + fase2) + borde + base - 0.3 * rural - 0.6 * entre((jy - yCiudad + 60) / 120);
       const d = distancia(jx, jy);
       if (d < medio.campo + 14 || reservado(jx, jy, 8) || reservado(jx, jy - 40, 4)) continue;
       const r = azar(semilla * 6.7);
@@ -489,8 +667,8 @@ export function componerPaisaje(e: EntradaComposicion): PiezaColocada[] {
         poner({ tipo, x: jx, y: jy, s, v: 1, semilla }, 12 * s);
       } else if (densidad > 0.62 && r < 0.18 && libre(jx, jy, 10)) {
         poner({ tipo: 'arbusto', x: jx, y: jy, s: 0.6 + r * 1.5, v: 1, semilla }, 10);
-      } else if (jy > yCiudad - 220 && r > 0.975 && d > medio.campo + 40 && libre(jx, jy, 30)) {
-        // Afueras: alguna casa suelta antes de la ciudad.
+      } else if (jy > yPueblo - 280 && jy < yPueblo && r > 0.975 && d > medio.campo + 40 && libre(jx, jy, 30)) {
+        // Afueras: algún cortijo suelto antes del pueblo.
         poner({ tipo: 'casa', x: jx, y: jy, s: 0.9, v: 1, semilla }, 30);
       } else if (r > 0.9) {
         piezas.push({ tipo: 'hierba', x: jx, y: jy, s: 1, v: 1, semilla });
@@ -498,16 +676,74 @@ export function componerPaisaje(e: EntradaComposicion): PiezaColocada[] {
     }
   }
 
-  // 3. Ciudad: edificios que siguen la calle, sin invadir la acera.
+  // 3. Pueblo: casas encaladas junto a la carretera, más densas en el centro del pueblo,
+  // que continúan un poco dentro de la ciudad para que el cambio no sea brusco.
+  const casas: PiezaColocada[] = [];
+  const solapa = (x: number, y: number, w: number) =>
+    casas.some((b) => Math.abs(b.x - x) < ((b.w ?? 0) + w) / 2 + 3 && Math.abs(b.y - y) < 26);
+  let iglesia = false;
+  for (let y = yPueblo - 40; y < yCiudad + 170; y += 28) {
+    for (let x = 12; x < W; x += 28) {
+      semilla++;
+      const jx = x + (azar(semilla * 2.1) - 0.5) * 10;
+      const jy = y + (azar(semilla * 3.3) - 0.5) * 10;
+      const ciudad = jy >= yCiudad;
+      const m = ciudad ? medio.ciudad : medio.campo;
+      const d = distancia(jx, jy);
+      if (d < m + 8 || reservado(jx, jy, 6)) continue;
+      const r = azar(semilla * 7.7);
+      const intensidad = entre((jy - yPueblo + 40) / 200) * (1 - entre((jy - yCiudad) / 170));
+      if (!iglesia && !ciudad && jy > yPueblo + 200 && d > m + 30 && d < m + 100 && r < 0.3) {
+        const cabe = [
+          [jx - 26, jy],
+          [jx + 26, jy],
+          [jx + 18, jy - 68],
+          [jx - 18, jy - 68],
+          [jx, jy - 34],
+        ].every(([px, py]) => distancia(px, py) > m + 8 && !reservado(px, py, 4));
+        if (cabe && !solapa(jx, jy, 50) && libre(jx, jy, 30)) {
+          const ig: PiezaColocada = { tipo: 'iglesia', x: jx, y: jy, s: 1, v: jx < W / 2 ? 1 : -1, w: 50, semilla };
+          casas.push(ig);
+          poner(ig, 30);
+          iglesia = true;
+          continue;
+        }
+      }
+      const cerca = d < m + 70 ? 1 : d < m + 130 ? 0.4 : 0.1;
+      if (r > 0.55 * intensidad * cerca) {
+        if (!ciudad && jy > yPueblo + 40 && d > m + 110 && r > 0.985 && libre(jx, jy, 26)) {
+          poner({ tipo: 'huerto', x: jx, y: jy, s: 0.9, v: 1, semilla }, 26);
+        }
+        continue;
+      }
+      const w = 20 + Math.round(azar(semilla * 4.9) * 14);
+      const h = 12 + Math.round(azar(semilla * 5.7) * 8);
+      const alto = h + w * 0.32 + 6;
+      const cabe = [
+        [jx - w / 2, jy],
+        [jx + w / 2, jy],
+        [jx - w / 2, jy - alto],
+        [jx + w / 2, jy - alto],
+      ].every(([px, py]) => distancia(px, py) > m + 6 && !reservado(px, py, 3));
+      if (!cabe || solapa(jx, jy, w) || !libre(jx, jy, w / 2)) continue;
+      const c: PiezaColocada = { tipo: 'casaPueblo', x: jx, y: jy, s: 1, v: 1, w, h, semilla };
+      casas.push(c);
+      piezas.push(c);
+    }
+  }
+
+  // 4. Ciudad: edificios que siguen la calle, sin invadir la acera. Empiezan bajos y
+  // ganan altura hacia el centro.
   const edificios: PiezaColocada[] = [];
   for (let y = yCiudad + 50; y < e.alto - 10; y += 34) {
     for (let x = 14; x < W; x += 30) {
       semilla++;
       const jx = x + (azar(semilla * 1.9) - 0.5) * 8;
       const jy = y + (azar(semilla * 3.7) - 0.5) * 10;
-      if (azar(semilla * 5.9) < 0.5 || reservado(jx, jy, 6)) continue;
+      const centroCiudad = entre((jy - yCiudad - 60) / 260);
+      if (azar(semilla * 5.9) < 0.5 + 0.3 * (1 - centroCiudad) || reservado(jx, jy, 6)) continue;
       const w = 22 + Math.round(azar(semilla * 2.9) * 14);
-      let h = 34 + Math.round(azar(semilla * 4.3) * 56);
+      let h = 30 + Math.round(azar(semilla * 4.3) * (14 + 46 * centroCiudad));
       const cabe = (hh: number) =>
         [
           [jx - w / 2, jy],
@@ -519,26 +755,29 @@ export function componerPaisaje(e: EntradaComposicion): PiezaColocada[] {
       while (h >= 30 && !cabe(h)) h -= 12;
       if (h < 30) continue;
       if (edificios.some((b) => Math.abs(b.x - jx) < ((b.w ?? 0) + w) / 2 - 2 && Math.abs(b.y - jy) < 30)) continue;
+      if (solapa(jx, jy, w)) continue;
       const b: PiezaColocada = { tipo: 'edificio', x: jx, y: jy, s: 1, v: 1, w, h, semilla };
       edificios.push(b);
       piezas.push(b);
     }
   }
 
-  // 4. Mobiliario urbano a lo largo de la acera: farolas a intervalos regulares, alternando lados.
+  // 5. Farolas a intervalos regulares, alternando lados: espaciadas en el pueblo y más seguidas en la ciudad.
   let recorrido = 0;
   let lado = 1;
   for (let i = 1; i < muestras.length; i++) {
     const a = muestras[i - 1];
     const b = muestras[i];
     recorrido += Math.hypot(b.x - a.x, b.y - a.y);
-    if (b.y < yCiudad + 30 || recorrido < 150) continue;
+    const enCiudad = b.y >= yCiudad + 30;
+    if (b.y < yPueblo + 80 || recorrido < (enCiudad ? 150 : 250)) continue;
     recorrido = 0;
+    const separacion = enCiudad ? medio.ciudad - 8 : medio.campo + 6;
     const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
     const nx = -(b.y - a.y) / len;
     const ny = (b.x - a.x) / len;
-    const px = b.x + nx * lado * (medio.ciudad - 8);
-    const py = b.y + ny * lado * (medio.ciudad - 8);
+    const px = b.x + nx * lado * separacion;
+    const py = b.y + ny * lado * separacion;
     if (!reservado(px, py, 10) && py < e.alto - 20) {
       piezas.push({ tipo: 'farola', x: px, y: py, s: 0.85, v: (nx * lado > 0 ? -1 : 1) as 1 | -1, semilla: i });
     }
@@ -581,5 +820,11 @@ export function PiezaPaisaje({ p }: { p: PiezaColocada }) {
       return <Semaforo x={p.x} y={p.y} s={p.s} />;
     case 'arbolCiudad':
       return <ArbolCiudad x={p.x} y={p.y} s={p.s} />;
+    case 'casaPueblo':
+      return <CasaPueblo x={p.x} y={p.y} w={p.w ?? 26} h={p.h ?? 16} semilla={p.semilla} />;
+    case 'iglesia':
+      return <Iglesia x={p.x} y={p.y} s={p.s} v={p.v} />;
+    case 'huerto':
+      return <Huerto x={p.x} y={p.y} s={p.s} />;
   }
 }

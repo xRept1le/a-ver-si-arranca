@@ -7,18 +7,25 @@ import { camino, esPrevisto, niveles, tituloNivel, type Nivel, type NivelPrevist
 import { estadosNiveles, nivelActual, nivelQueFalta, type EstadoNivel } from '@/domain/niveles';
 import { useDatos } from '@/store/useDatos';
 import { Dialogo, Icono } from './componentes';
-import { azar, componerPaisaje, EntradaPoblado, Meta, PAISAJE, PasoPeatones, PiezaPaisaje } from './Paisaje';
+import { azar, CartelOrientacion, componerPaisaje, EntradaPoblado, Meta, PAISAJE, PasoPeatones, PiezaPaisaje, Tunel } from './Paisaje';
 import { colores, radio } from './tema';
 
 const NODO = 58;
 const NODO_ACTUAL = 70;
 /** Altura de cada elemento del camino. */
-const ALTO = { cartel: 96, nivel: 118, entrada: 96, meta: 90 } as const;
+const ALTO = { cartel: 96, nivel: 118, entrada: 110, meta: 90 } as const;
+/** Altura de la ladera con el túnel del principio y altura de su boca. */
+const TUNEL = { alto: 128, boca: 104 } as const;
 /** Medio ancho de la calzada y de lo que ocupa con arcén o acera. */
 const CALZADA = { campo: 54, ciudad: 64 } as const;
 const OCUPA = { campo: CALZADA.campo / 2 + 7, ciudad: CALZADA.ciudad / 2 + 15 } as const;
-/** Los dos últimos tramos discurren por ciudad. */
-const PRIMER_TRAMO_CIUDAD = Math.max(0, camino.length - 2);
+/** El penúltimo tramo atraviesa un pueblo y el último, la ciudad. */
+const PRIMER_TRAMO_PUEBLO = Math.max(0, camino.length - 2);
+const PRIMER_TRAMO_CIUDAD = Math.max(0, camino.length - 1);
+/** Nombre del pueblo en la señal de entrada a poblado. */
+const NOMBRE_PUEBLO = 'VILLARRANCA';
+/** Altura de los fundidos entre zonas. */
+const FUNDIDO = 220;
 const CARACTER = ['prado', 'bosque', 'cultivo'] as const;
 const CARTEL = { ancho: 150, alto: 52 } as const;
 const ENSANCHE = 30;
@@ -48,7 +55,7 @@ const centro = (e: Elemento) => e.y + ALTO[e.tipo] / 2;
 /** Coloca los elementos del camino de arriba abajo. */
 function trazar() {
   const elementos: Elemento[] = [];
-  let y = 0;
+  let y = TUNEL.alto;
   let k = 0;
   camino.forEach((tramo, t) => {
     if (t === PRIMER_TRAMO_CIUDAD && t > 0) {
@@ -89,6 +96,8 @@ export function CaminoNiveles() {
 
   const { elementos, total } = useMemo(trazar, []);
   const yCiudad = elementos.find((e) => e.tipo === 'entrada')?.y ?? total;
+  const cartelPueblo = elementos.find((e) => e.tipo === 'cartel' && e.t === PRIMER_TRAMO_PUEBLO);
+  const yPueblo = cartelPueblo && PRIMER_TRAMO_PUEBLO > 0 ? cartelPueblo.y - 30 : yCiudad;
 
   // Geometría y paisaje: solo dependen del ancho.
   const escena = useMemo(() => {
@@ -98,7 +107,7 @@ export function CaminoNiveles() {
       const amplitud = 0.17 + azar(e.k * 3 + 2) * 0.06;
       return W * (0.5 + (e.k % 2 === 0 ? -amplitud : amplitud));
     };
-    const puntos = [{ x: W / 2, y: 0 }, ...elementos.map((e) => ({ x: xDe(e), y: centro(e) })), { x: W / 2, y: total }];
+    const puntos = [{ x: W / 2, y: TUNEL.boca }, ...elementos.map((e) => ({ x: xDe(e), y: centro(e) })), { x: W / 2, y: total }];
 
     // Carteles junto a la calzada, alternando lado.
     const carteles = elementos.flatMap((e) => {
@@ -108,7 +117,18 @@ export function CaminoNiveles() {
       return [{ e, x, y: centro(e) - CARTEL.alto / 2 - 10 }];
     });
 
+    // Señal de entrada a poblado, en el lado contrario al cartel del tramo.
+    const entradaPueblo =
+      cartelPueblo && cartelPueblo.tipo === 'cartel' && yPueblo < yCiudad
+        ? {
+            x: cartelPueblo.t % 2 === 0 ? W / 2 + OCUPA.campo + 58 : W / 2 - OCUPA.campo - 58,
+            y: centro(cartelPueblo) + 30,
+          }
+        : undefined;
+
     const reservas = [
+      { x0: 0, y0: 0, x1: W, y1: TUNEL.alto },
+      ...(entradaPueblo ? [{ x0: entradaPueblo.x - 52, y0: entradaPueblo.y - 64, x1: entradaPueblo.x + 52, y1: entradaPueblo.y + 6 }] : []),
       // Alrededor de cada nivel, incluida la pastilla del nivel actual.
       ...elementos.flatMap((e, i) =>
         e.tipo === 'nivel' ? [{ x0: puntos[i + 1].x - 56, y0: puntos[i + 1].y - 50, x1: puntos[i + 1].x + 56, y1: puntos[i + 1].y + 70 }] : [],
@@ -121,9 +141,9 @@ export function CaminoNiveles() {
     const tramos = elementos.flatMap((e, i) => {
       if (e.tipo !== 'cartel') return [];
       const siguiente = elementos.slice(i + 1).find((s) => s.tipo !== 'nivel');
-      return [{ y0: e.y, y1: siguiente?.y ?? total, caracter: CARACTER[e.t % 3] }];
+      return [{ y0: e.y, y1: siguiente?.y ?? total, caracter: e.t < PRIMER_TRAMO_PUEBLO ? CARACTER[e.t % 3] : 'cultivo' }];
     });
-    const piezas = componerPaisaje({ ancho: W, alto: total, yCiudad, puntos, medio: OCUPA, reservas, tramos });
+    const piezas = componerPaisaje({ ancho: W, alto: total, yPueblo, yCiudad, puntos, medio: OCUPA, reservas, tramos });
 
     // Trazado de la calzada, separado en campo y ciudad. Al entrar en la ciudad la calzada
     // se ensancha de forma gradual en un tramo recto de ENSANCHE px.
@@ -143,18 +163,19 @@ export function CaminoNiveles() {
       }
     }
 
-    // Un paso de peatones por tramo de ciudad, en mitad de su primera curva.
+    // Un paso de peatones por tramo de pueblo o ciudad, en mitad de su primera curva.
     const pasos = elementos.flatMap((e, i) => {
-      if (e.tipo !== 'cartel' || e.y < yCiudad) return [];
+      if (e.tipo !== 'cartel' || e.y < yPueblo) return [];
       const a = puntos[i + 2];
       const b = puntos[i + 3];
       if (!a || !b) return [];
       const grados = (Math.atan2(0.75 * (b.y - a.y), 1.5 * (b.x - a.x)) * 180) / Math.PI;
-      return [{ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, grados }];
+      const ancho = (e.y >= yCiudad ? CALZADA.ciudad : CALZADA.campo) - 10;
+      return [{ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, grados, ancho }];
     });
 
-    return { puntos, carteles, piezas, trazado, pasos, yEnsanche };
-  }, [W, elementos, total, yCiudad]);
+    return { puntos, carteles, piezas, trazado, pasos, yEnsanche, entradaPueblo };
+  }, [W, elementos, total, yPueblo, yCiudad, cartelPueblo]);
 
   const { puntos } = escena;
   const indiceActual = actual ? elementos.findIndex((e) => e.tipo === 'nivel' && e.nivel.id === actual.id) + 1 : puntos.length;
@@ -186,14 +207,20 @@ export function CaminoNiveles() {
               <Stop offset="0" stopColor={colores.fondo} stopOpacity={1} />
               <Stop offset="1" stopColor={colores.fondo} stopOpacity={0} />
             </LinearGradient>
-            <LinearGradient id="transicion" x1="0" y1="0" x2="0" y2="1">
+            <LinearGradient id="aPueblo" x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0" stopColor={PAISAJE.campo} stopOpacity={1} />
+              <Stop offset="1" stopColor={PAISAJE.pueblo} stopOpacity={1} />
+            </LinearGradient>
+            <LinearGradient id="aCiudad" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={PAISAJE.pueblo} stopOpacity={1} />
               <Stop offset="1" stopColor={PAISAJE.ciudad} stopOpacity={1} />
             </LinearGradient>
           </Defs>
-          <Rect x={0} y={0} width={W} height={yCiudad} fill={PAISAJE.campo} />
+          <Rect x={0} y={0} width={W} height={yPueblo} fill={PAISAJE.campo} />
+          <Rect x={0} y={yPueblo} width={W} height={yCiudad - yPueblo} fill={PAISAJE.pueblo} />
           <Rect x={0} y={yCiudad} width={W} height={total - yCiudad} fill={PAISAJE.ciudad} />
-          <Rect x={0} y={yCiudad - 60} width={W} height={120} fill="url(#transicion)" />
+          <Rect x={0} y={yPueblo - FUNDIDO / 2} width={W} height={FUNDIDO} fill="url(#aPueblo)" />
+          <Rect x={0} y={yCiudad - FUNDIDO / 2} width={W} height={FUNDIDO} fill="url(#aCiudad)" />
 
           {/* Calzada */}
           {escena.trazado.campo ? (
@@ -218,7 +245,7 @@ export function CaminoNiveles() {
             </G>
           ) : null}
           {escena.pasos.map((p, i) => (
-            <PasoPeatones key={`pp${i}`} x={p.x} y={p.y} grados={p.grados} ancho={CALZADA.ciudad - 10} />
+            <PasoPeatones key={`pp${i}`} x={p.x} y={p.y} grados={p.grados} ancho={p.ancho} />
           ))}
 
           {/* Línea central: azul en la parte ya recorrida */}
@@ -247,13 +274,23 @@ export function CaminoNiveles() {
             </G>
           ))}
 
+          {escena.entradaPueblo ? <EntradaPoblado x={escena.entradaPueblo.x} y={escena.entradaPueblo.y} nombre={NOMBRE_PUEBLO} /> : null}
           {elementos.map((e) =>
             e.tipo === 'entrada' ? (
-              <EntradaPoblado key="entrada" x={W / 2 - OCUPA.ciudad - 44} y={centro(e) + 34} nombre="CIUDAD" />
+              <CartelOrientacion
+                key="entrada"
+                x={W / 2}
+                y={e.y + 6}
+                ySuelo={e.y + ALTO.entrada - 4}
+                ruta={`T-${PRIMER_TRAMO_CIUDAD + 1}`}
+                nombre="Ciudad"
+                separacion={CALZADA.ciudad + 44}
+              />
             ) : e.tipo === 'meta' ? (
               <Meta key="meta" x={W / 2} y={centro(e)} w={CALZADA.ciudad} />
             ) : null,
           )}
+          <Tunel x={W / 2} yBoca={TUNEL.boca} ancho={CALZADA.campo} W={W} />
           <Rect x={0} y={0} width={W} height={36} fill="url(#fundido)" />
         </Svg>
       </View>
