@@ -234,6 +234,14 @@ async (pagina, log) => {
   await pulsar('ficha-siguiente');
   ok((await vis('ficha-codigo').innerText()) === 'P-1a', 'Catálogo: «Siguiente» pasa a la señal siguiente');
   await page.screenshot({ path: FOTOS + 'catalogo-ficha.png' });
+  ok(!(await id('ficha-distancia').count()), 'Catálogo: las señales que no son de aproximación no muestran distancia');
+  await vis('ficha-senal').locator('[data-testid="boton-atras"]').click();
+  await vis('ficha-senal').waitFor({ state: 'hidden' });
+  await pulsar('senal-p-9b');
+  await esperar('ficha-distancia');
+  ok((await vis('ficha-distancia').innerText()).includes('dos tercios'), 'Catálogo: la baliza P-9b indica a qué distancia corresponde');
+  await page.waitForTimeout(1200);
+  await page.screenshot({ path: FOTOS + 'catalogo-distancia.png' });
   await vis('ficha-senal').locator('[data-testid="boton-atras"]').click();
   await vis('ficha-senal').waitFor({ state: 'hidden' });
   await atras();

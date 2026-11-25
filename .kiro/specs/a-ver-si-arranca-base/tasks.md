@@ -23,6 +23,7 @@ Cada tarea indica los criterios de aceptación (CA) de `requirements.md` que cub
 - [x] 19. Nivel 1 de «El conductor y el permiso B» (15 preguntas), primer nivel del camino; apartados del capítulo 1. Jest: 20 pruebas. Recorrido web: 63 comprobaciones. · CA2.3, CA2.6, R4
 - [x] 20. Túnel entre tramos para separar biomas, playa rehecha y faro sobre rocas. · CA2.2
 - [x] 21. Decoración sin solapes (rejilla de ocupación) y menos densa, túneles solo con boca de salida, playa a todo el alto del tramo y 5 niveles por tramo (75; los nuevos, «Próximamente»). Recorrido web: 65 comprobaciones. · CA2.2, CA2.6
+- [x] 22. La ficha de los paneles de salida (S-26a/b/c) y de las balizas de paso a nivel (P-9a/b/c, P-10a/b/c) indica a qué distancia corresponden (`src/content/senales/distancias.ts`, texto propio derivado de la descripción oficial). Recorrido web: 67 comprobaciones. · R3
 
 ## Decisiones tomadas durante la implementación
 

@@ -1,4 +1,5 @@
 import { SENALES } from './datos';
+import { DISTANCIAS } from './distancias';
 import { IMAGENES } from './imagenes';
 import type { FamiliaSenal, FamiliaSenalId, SenalCatalogo, TipoSenal, TipoSenalId } from './tipos';
 
@@ -55,6 +56,8 @@ for (const s of SENALES) {
 export const getTipoSenal = (id: string) => TIPOS.find((t) => t.id === id);
 export const senalesDeTipo = (id: TipoSenalId): SenalCatalogo[] => porTipo.get(id) ?? [];
 export const tiposDeFamilia = (id: FamiliaSenalId) => TIPOS.filter((t) => t.familia === id);
+/** A qué distancia corresponde una señal de aproximación (paneles de salida y balizas de paso a nivel). */
+export const distanciaSenal = (s: SenalCatalogo): string | undefined => DISTANCIAS[s.codigo];
 export const imagenSenal = (s: SenalCatalogo): number | undefined => IMAGENES[s.imagen];
 
 /** Título completo de un tipo, con su subgrupo si lo tiene. */

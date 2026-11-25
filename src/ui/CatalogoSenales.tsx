@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   FAMILIAS,
   FUENTE_CATALOGO,
+  distanciaSenal,
   getTipoSenal,
   imagenSenal,
   paginaFuente,
@@ -200,6 +201,11 @@ function FichaSenal({
             <Text style={texto.cuerpo} testID="ficha-descripcion">
               {senal.descripcion}
             </Text>
+            {distanciaSenal(senal) ? (
+              <Text style={texto.cuerpo} testID="ficha-distancia">
+                {distanciaSenal(senal)}
+              </Text>
+            ) : null}
             <Text style={texto.suave}>
               {tipo ? `${tituloTipo(tipo)} · ` : ''}
               {paginaFuente(senal.pagina)}
