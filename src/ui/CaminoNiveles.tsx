@@ -31,7 +31,9 @@ import { colores, radio } from './tema';
 const NODO = 58;
 const NODO_ACTUAL = 70;
 /** Altura de cada elemento del camino. */
-const ALTO = { cartel: 96, nivel: 118, entrada: 110, salida: 96, meta: 90 } as const;
+const ALTO = { cartel: 96, nivel: 118, entrada: 110, salida: 96, meta: 90, tunel: 170 } as const;
+/** Dentro del elemento túnel: altura de la cresta y de la boca de salida. */
+const TUNEL_ENTRE = { cima: 14, boca: 132 } as const;
 /** Altura de la ladera con el túnel del principio y altura de su boca. */
 const TUNEL = { alto: 128, boca: 104 } as const;
 /** Medio ancho de la calzada y de lo que ocupa con arcén o acera. */
@@ -61,8 +63,6 @@ const NOMBRE_PUEBLO = 'VILLARRANCA';
 const NOMBRE_CIUDAD = 'CIUDAD';
 const CARTEL = { ancho: 150, alto: 60 } as const;
 const ENSANCHE = 30;
-/** Altura de los fundidos de fondo entre biomas. */
-const FUNDIDO = 240;
 /** Altura de cada trozo de SVG: un único lienzo de miles de px es demasiado grande en Android. */
 const TROZO = 720;
 /** El coche para un poco antes del nivel siguiente. */
@@ -86,7 +86,8 @@ type Elemento =
   | { tipo: 'nivel'; y: number; tramo: TramoCamino; t: number; nivel: Nivel | NivelPrevisto; previsto: boolean; k: number }
   | { tipo: 'entrada'; y: number; t: number }
   | { tipo: 'salida'; y: number; t: number }
-  | { tipo: 'meta'; y: number };
+  | { tipo: 'meta'; y: number }
+  | { tipo: 'tunel'; y: number; t: number };
 type ElementoNivel = Extract<Elemento, { tipo: 'nivel' }>;
 
 const centro = (e: Elemento) => e.y + ALTO[e.tipo] / 2;
@@ -100,7 +101,14 @@ function trazar() {
   camino.forEach((tramo, t) => {
     const bioma = biomaDe(t);
     const urbano = !!BIOMAS[bioma].urbano;
-    const y0 = t === 0 ? 0 : y;
+    let y0 = 0;
+    // Entre dos tramos, la carretera atraviesa un túnel: el bioma cambia bajo la montaña.
+    if (t > 0) {
+      elementos.push({ tipo: 'tunel', y, t });
+      y0 = y + ALTO.tunel / 2;
+      zonas[zonas.length - 1].y1 = y0;
+      y += ALTO.tunel;
+    }
     // Las ciudades tienen entrada y salida en tramos rectos, donde la calzada cambia de anchura.
     if (urbano && t > 0 && !BIOMAS[biomaDe(t - 1)].urbano) {
       elementos.push({ tipo: 'entrada', y, t });
@@ -181,8 +189,9 @@ export function CaminoNiveles() {
     // Zigzag con amplitud algo irregular para que no parezca dibujado con plantilla.
     const xDe = (e: Elemento) => {
       if (e.tipo !== 'nivel') return W / 2;
-      const amplitud = 0.17 + azar(e.k * 3 + 2) * 0.06;
-      return W * (0.5 + (e.k % 2 === 0 ? -amplitud : amplitud));
+      const b = BIOMAS[biomaDe(e.t)];
+      const amplitud = (0.17 + azar(e.k * 3 + 2) * 0.06) * (b.amplitud ?? 1);
+      return W * ((b.centro ?? 0.5) + (e.k % 2 === 0 ? -amplitud : amplitud));
     };
     const puntos = [{ x: W / 2, y: TUNEL.boca }, ...elementos.map((e) => ({ x: xDe(e), y: centro(e) })), { x: W / 2, y: total }];
     const indiceDe = (e: Elemento) => elementos.indexOf(e) + 1;
@@ -212,11 +221,17 @@ export function CaminoNiveles() {
     zonas.forEach((z) => {
       const b = BIOMAS[z.bioma];
       if (b.especial === 'mar') {
-        const y0 = z.y0 + ALTO.cartel + 40;
-        const y1 = z.y1 - 40;
-        const x = W - 54;
-        especiales.push({ y0, y1, nodo: <Mar key={`mar${z.y0}`} y0={y0} y1={y1} x={x} W={W} /> });
-        reservasAgua.push({ x0: x - 30, y0: y0 - 10, x1: W, y1: y1 + 10 });
+        // La playa ocupa el lateral derecho junto a los niveles del tramo; la carretera va desplazada hacia el interior.
+        const niv = elementos.filter((e): e is ElementoNivel => e.tipo === 'nivel' && e.y >= z.y0 && e.y < z.y1);
+        if (niv.length) {
+          const y0 = niv[0].y - 10;
+          const y1 = niv[niv.length - 1].y + ALTO.nivel + 10;
+          const bordeCarretera = Math.max(...niv.map((e) => puntos[indiceDe(e)].x)) + OCUPA.campo;
+          const xArena = Math.max(bordeCarretera + 18, W * 0.6);
+          const xAgua = Math.max(xArena + 44, W * 0.79);
+          especiales.push({ y0, y1, nodo: <Mar key={`mar${z.y0}`} y0={y0} y1={y1} xArena={xArena} xAgua={xAgua} W={W} /> });
+          reservasAgua.push({ x0: xArena - 16, y0: y0 - 16, x1: W, y1: y1 + 16 });
+        }
       }
       if (b.especial === 'rio') {
         const niv = elementos.filter((e): e is ElementoNivel => e.tipo === 'nivel' && e.y >= z.y0 && e.y < z.y1);
@@ -246,20 +261,15 @@ export function CaminoNiveles() {
       ...elementos
         .filter((e) => e.tipo === 'entrada' || e.tipo === 'salida' || e.tipo === 'meta')
         .map((e) => ({ x0: 0, y0: e.y, x1: W, y1: e.y + ALTO[e.tipo] })),
+      // Túneles: la cordillera y un margen bajo la boca.
+      ...elementos.filter((e) => e.tipo === 'tunel').map((e) => ({ x0: 0, y0: e.y, x1: W, y1: e.y + TUNEL_ENTRE.boca + 12 })),
     ];
     const piezas = componerPaisaje({ ancho: W, alto: total, puntos, medio: OCUPA, reservas, zonas });
 
     const capas: Capa[] = [];
-    // Fondo de cada bioma y fundidos entre biomas.
+    // Fondo de cada bioma: el cambio queda bajo la cordillera del túnel.
     zonas.forEach((z, i) => {
       capas.push({ y0: z.y0, y1: z.y1, nodo: <Rect key={`f${i}`} x={0} y={z.y0} width={W} height={z.y1 - z.y0} fill={BIOMAS[z.bioma].fondo} /> });
-    });
-    zonas.slice(1).forEach((z, i) => {
-      capas.push({
-        y0: z.y0 - FUNDIDO / 2,
-        y1: z.y0 + FUNDIDO / 2,
-        nodo: <Rect key={`fu${i}`} x={0} y={z.y0 - FUNDIDO / 2} width={W} height={FUNDIDO} fill={`url(#fundido${i + 1})`} />,
-      });
     });
     capas.push(...especiales);
 
@@ -359,7 +369,25 @@ export function CaminoNiveles() {
   }, [puntos, indiceActual, inicioRecorrido]);
 
   const capasSuperiores = useMemo(() => {
-    const capas: Capa[] = escena.piezas.map((p, i) => ({ y0: p.y - 130, y1: p.y + 10, nodo: <PiezaPaisaje key={`z${i}`} p={p} /> }));
+    // Paisaje y cordilleras de los túneles, ordenados por profundidad (la base más baja, delante).
+    const porProfundidad: { base: number; capa: Capa }[] = escena.piezas.map((p, i) => ({
+      base: p.y,
+      capa: { y0: p.y - 130, y1: p.y + 10, nodo: <PiezaPaisaje key={`z${i}`} p={p} /> },
+    }));
+    elementos.forEach((e) => {
+      if (e.tipo !== 'tunel') return;
+      porProfundidad.push({
+        base: e.y + TUNEL_ENTRE.boca,
+        capa: {
+          y0: e.y,
+          y1: e.y + TUNEL_ENTRE.boca + 6,
+          nodo: (
+            <Tunel key={`tunel${e.t}`} x={W / 2} yBoca={e.y + TUNEL_ENTRE.boca} cima={e.y + TUNEL_ENTRE.cima} ancho={CALZADA.campo} W={W} semilla={e.t} />
+          ),
+        },
+      });
+    });
+    const capas: Capa[] = porProfundidad.sort((a, b) => a.base - b.base).map((p) => p.capa);
     escena.carteles.forEach(({ e, x, y }) =>
       capas.push({
         y0: y,
@@ -416,22 +444,23 @@ export function CaminoNiveles() {
           <Stop offset="0" stopColor={colores.fondo} stopOpacity={1} />
           <Stop offset="1" stopColor={colores.fondo} stopOpacity={0} />
         </LinearGradient>
-        {zonas.slice(1).map((z, i) => (
-          <LinearGradient key={i} id={`fundido${i + 1}`} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={BIOMAS[zonas[i].bioma].fondo} stopOpacity={1} />
-            <Stop offset="1" stopColor={BIOMAS[z.bioma].fondo} stopOpacity={1} />
-          </LinearGradient>
-        ))}
       </>
     ),
-    [zonas],
+    [],
   );
 
   const capas = useMemo(() => [...escena.capas, ...capasDinamicas, ...capasSuperiores], [escena.capas, capasDinamicas, capasSuperiores]);
   const trozos = useMemo(() => Array.from({ length: Math.ceil(total / TROZO) }, (_, i) => i * TROZO), [total]);
 
   // Coche: arranca a la salida del túnel y, tras completar niveles, para justo antes del siguiente.
-  const rutaCoche = useMemo(() => muestrearRecorrido(puntos, 11), [puntos]);
+  // Dentro de los túneles el coche no se ve.
+  const rutaCoche = useMemo(() => {
+    const ocultos: [number, number][] = [
+      [-Infinity, TUNEL.boca - 4],
+      ...elementos.filter((e) => e.tipo === 'tunel').map((e) => [e.y + TUNEL_ENTRE.cima + 10, e.y + TUNEL_ENTRE.boca - 8] as [number, number]),
+    ];
+    return muestrearRecorrido(puntos, 11, ocultos);
+  }, [puntos, elementos]);
   const destinoCoche = useMemo(() => {
     if (!hayCompletados) return 26;
     const i = actual ? elementos.findIndex((e) => e.tipo === 'nivel' && e.nivel.id === actual.id) : -1;

@@ -21,6 +21,7 @@ Cada tarea indica los criterios de aceptación (CA) de `requirements.md` que cub
 - [x] 17. Túnel al inicio del camino, zona de pueblo entre campo y ciudad, transiciones graduales, cartel de orientación azul a la entrada de la ciudad y simulacro de 30 minutos. Recorrido web con 57 comprobaciones. · CA2.2, R5
 - [x] 18. Un tramo por capítulo del temario (15) con un bioma propio cada uno, coche que avanza por la carretera y confeti al completar un nivel. Recorrido web con 62 comprobaciones. · CA2.2, CA2.6, CA4.0
 - [x] 19. Nivel 1 de «El conductor y el permiso B» (15 preguntas), primer nivel del camino; apartados del capítulo 1. Jest: 20 pruebas. Recorrido web: 63 comprobaciones. · CA2.3, CA2.6, R4
+- [x] 20. Túnel entre tramos para separar biomas, playa rehecha y faro sobre rocas. · CA2.2
 
 ## Decisiones tomadas durante la implementación
 

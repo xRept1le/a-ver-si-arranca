@@ -14,6 +14,8 @@ export interface Recorrido {
   y: number[];
   /** Ángulo de avance en grados, sin saltos de 360°. */
   grados: number[];
+  /** 0 donde el coche va oculto (dentro de un túnel), 1 en el resto. */
+  opacidad: number[];
 }
 
 /** Última posición mostrada, para animar desde ahí al volver a Inicio. */
@@ -66,6 +68,10 @@ export function Coche({ recorrido, destino, activo }: { recorrido: Recorrido; de
       { rotate: progreso.interpolate({ inputRange: entrada, outputRange: recorrido.grados.map((g) => `${g}deg`), extrapolate: 'clamp' }) },
     ];
   }, [progreso, recorrido]);
+  const opacity = useMemo(
+    () => progreso.interpolate({ inputRange: recorrido.s, outputRange: recorrido.opacidad, extrapolate: 'clamp' }),
+    [progreso, recorrido],
+  );
 
   return (
     <Animated.View
@@ -73,7 +79,7 @@ export function Coche({ recorrido, destino, activo }: { recorrido: Recorrido; de
       pointerEvents="none"
       importantForAccessibility="no-hide-descendants"
       accessibilityElementsHidden
-      style={{ position: 'absolute', left: 0, top: 0, width: LARGO, height: ANCHO, transform }}
+      style={{ position: 'absolute', left: 0, top: 0, width: LARGO, height: ANCHO, opacity, transform }}
     >
       <Svg width={LARGO} height={ANCHO}>
         <Rect x={2} y={2.5} width={31} height={15} rx={5} fill="#000" opacity={0.35} />
@@ -90,10 +96,16 @@ export function Coche({ recorrido, destino, activo }: { recorrido: Recorrido; de
 
 /**
  * Muestrea la carretera (curvas con tangentes verticales entre `puntos`) para el coche,
- * desplazado `carril` px a la derecha del sentido de la marcha.
+ * desplazado `carril` px a la derecha del sentido de la marcha. En las franjas `ocultos`
+ * ([y0, y1]) el coche va dentro de un túnel y no se dibuja.
  */
-export function muestrearRecorrido(puntos: { x: number; y: number }[], carril: number, porTramo = 12): Recorrido {
-  const r: Recorrido = { s: [], x: [], y: [], grados: [] };
+export function muestrearRecorrido(
+  puntos: { x: number; y: number }[],
+  carril: number,
+  ocultos: [number, number][] = [],
+  porTramo = 12,
+): Recorrido {
+  const r: Recorrido = { s: [], x: [], y: [], grados: [], opacidad: [] };
   let s = 0;
   let previo: { x: number; y: number } | undefined;
   let gradosPrevio: number | undefined;
@@ -127,6 +139,7 @@ export function muestrearRecorrido(puntos: { x: number; y: number }[], carril: n
       r.x.push(px);
       r.y.push(py);
       r.grados.push(g);
+      r.opacidad.push(ocultos.some(([y0, y1]) => py > y0 && py < y1) ? 0 : 1);
       previo = { x: px, y: py };
       gradosPrevio = g;
     }

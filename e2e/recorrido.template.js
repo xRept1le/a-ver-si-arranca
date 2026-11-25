@@ -150,7 +150,11 @@ async (pagina, log) => {
   await esperar('tarjeta-continuar');
   ok((await estado('conductor-1')).startsWith('Completado'), 'Inicio: nivel 1 completado');
   ok((await estado('senales-1')) === 'Empezar', 'Inicio: el siguiente nivel con preguntas queda desbloqueado');
-  ok(await cocheAntesDe('senales-1'), 'Coche: tras completar un nivel avanza hasta el siguiente');
+  ok(await cocheAntesDe('senales-1'), 'Coche: tras completar un nivel avanza hasta el siguiente, atravesando los túneles');
+  ok(
+    (await page.locator('[data-testid="coche"]').last().evaluate((el) => getComputedStyle(el).opacity)) === '1',
+    'Coche: visible al salir del último túnel',
+  );
   await vis('nivel-senales-1').scrollIntoViewIfNeeded();
   await page.screenshot({ path: FOTOS + 'coche.png' });
 

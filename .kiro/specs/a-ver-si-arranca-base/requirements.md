@@ -49,7 +49,7 @@ Al comprobar se muestra: resultado (icono + texto «Correcto» / «Incorrecto»)
 
 **R2. Inicio.**
 - CA2.1 La tarjeta «Continuar» aparece en la primera vista sin desplazarse y muestra tema, nivel y duración estimada.
-- CA2.2 Debajo hay un camino vertical de niveles agrupados por tema con los tres estados de la tabla. El camino tiene forma de carretera con curvas: sale de un túnel y cruza un bioma distinto por tramo (15), con cambios graduales entre ellos. Un coche azul claro espera al principio de la carretera y, cada vez que se completa un nivel, avanza hasta el siguiente. Los niveles son lo que destaca: el paisaje es discreto, sin patrones repetidos, y el único texto es el título de cada tramo y «Empezar» en el nivel actual.
+- CA2.2 Debajo hay un camino vertical de niveles agrupados por tema con los tres estados de la tabla. El camino tiene forma de carretera con curvas: sale de un túnel y cruza un bioma distinto por tramo (15). Entre dos tramos la carretera atraviesa un túnel bajo una cordillera, que marca dónde acaba un bioma y empieza el siguiente. Un coche azul claro espera al principio de la carretera y, cada vez que se completa un nivel, avanza hasta el siguiente. Los niveles son lo que destaca: el paisaje es discreto, sin patrones repetidos, y el único texto es el título de cada tramo y «Empezar» en el nivel actual.
 - CA2.3 Tocar un nivel completado o disponible abre su lección; uno bloqueado muestra qué nivel falta.
 - CA2.4 Hay acceso directo a Mis errores (con número de pendientes) e icono de Ajustes.
 - CA2.5 Si todos los niveles están completados, «Continuar» propone repasar errores o un simulacro.

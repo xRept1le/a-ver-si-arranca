@@ -77,7 +77,9 @@ export const PAISAJE = {
   humo: '#8B8F99',
   placa: '#1E3A66',
   placaLinea: '#5B7BB0',
-  arena: '#3A3426',
+  arena: '#3E3729',
+  arenaOscura: '#2C271C',
+  aguaHonda: '#112639',
   agua: '#17324A',
   espuma: '#9FB7CC',
   pato: '#2E6B4F',
@@ -367,14 +369,33 @@ export function CartelOrientacion({
 
 /**
  * Ladera con la boca de un túnel en (x, yBoca), de la que sale la carretera de ancho `ancho`.
- * Ocupa todo el ancho `W` desde y = 0.
+ * Sin `cima`, la ladera ocupa todo el ancho `W` desde y = 0 (túnel de salida del camino).
+ * Con `cima`, es una cordillera que cruza la pantalla desde esa altura: la carretera entra
+ * por detrás, por una boca en la cresta, y sale por la boca de abajo. Separa dos biomas.
  */
-export function Tunel({ x, yBoca, ancho, W }: { x: number; yBoca: number; ancho: number; W: number }) {
+export function Tunel({ x, yBoca, ancho, W, cima, semilla = 0 }: { x: number; yBoca: number; ancho: number; W: number; cima?: number; semilla?: number }) {
   const w = ancho + 20;
   const h = 50;
   const arco = (m: number) =>
     `M${x - w / 2 + m},${yBoca} V${yBoca - h + w / 2} A${w / 2 - m},${w / 2 - m} 0 0 1 ${x + w / 2 - m},${yBoca - h + w / 2} V${yBoca} Z`;
-  const ladera = `M0,0 H${W} V${yBoca - 40} C${W * 0.86},${yBoca - 58} ${W * 0.72},${yBoca - 6} ${x + w / 2 + 26},${yBoca + 2} H${x - w / 2 - 26} C${W * 0.28},${yBoca - 6} ${W * 0.14},${yBoca - 64} 0,${yBoca - 34} Z`;
+  const pie = `V${yBoca - 40} C${W * 0.86},${yBoca - 58} ${W * 0.72},${yBoca - 6} ${x + w / 2 + 26},${yBoca + 2} H${x - w / 2 - 26} C${W * 0.28},${yBoca - 6} ${W * 0.14},${yBoca - 64} 0,${yBoca - 34} Z`;
+  let ladera: string;
+  let crestaCentro = 0;
+  if (cima === undefined) {
+    ladera = `M0,0 H${W} ${pie}`;
+  } else {
+    // Cresta irregular: picos y collados, más baja donde la cruza la carretera.
+    const pasos = Math.ceil(W / 34);
+    const puntos: string[] = [];
+    for (let i = 0; i <= pasos; i++) {
+      const px = (i / pasos) * W;
+      const cerca = Math.max(0, 1 - Math.abs(px - x) / 70);
+      const py = cima + azar(semilla * 17 + i * 3.7) * 26 + cerca * 14;
+      puntos.push(`${px.toFixed(1)},${py.toFixed(1)}`);
+    }
+    crestaCentro = cima + 16;
+    ladera = `M0,${yBoca - 34} L${puntos.join(' L')} L${W},${yBoca - 40} ${pie.replace(`V${yBoca - 40} `, '')}`;
+  }
   const pinos: [number, number, number][] = [
     [0.06, -40, 0.8],
     [0.13, -52, 0.6],
@@ -382,7 +403,7 @@ export function Tunel({ x, yBoca, ancho, W }: { x: number; yBoca: number; ancho:
     [0.71, -36, 0.65],
     [0.84, -50, 0.85],
     [0.93, -40, 0.6],
-  ];
+  ].map(([px, py, sc]) => [Math.min(0.97, Math.max(0.03, px + (cima === undefined ? 0 : (azar(semilla + px * 10) - 0.5) * 0.06))), py, sc]);
   return (
     <G>
       <Path d={ladera} fill={PAISAJE.roca} />
@@ -393,8 +414,21 @@ export function Tunel({ x, yBoca, ancho, W }: { x: number; yBoca: number; ancho:
         fill="none"
         strokeLinecap="round"
       />
-      {pinos.map(([px, py, s]) => (
-        <Pino key={px} x={W * px} y={yBoca + py} s={s} />
+      {cima !== undefined ? (
+        // Boca de entrada en la cresta, por donde se pierde la carretera.
+        <G>
+          <Path
+            d={`M${x - ancho / 2 - 4},${crestaCentro} A${ancho / 2 + 4},${ancho / 2 + 4} 0 0 0 ${x + ancho / 2 + 4},${crestaCentro} Z`}
+            fill={PAISAJE.hormigon}
+          />
+          <Path
+            d={`M${x - ancho / 2 + 1},${crestaCentro} A${ancho / 2 - 1},${ancho / 2 - 1} 0 0 0 ${x + ancho / 2 - 1},${crestaCentro} Z`}
+            fill={PAISAJE.interiorTunel}
+          />
+        </G>
+      ) : null}
+      {pinos.map(([px, py, sc]) => (
+        <Pino key={px} x={W * px} y={yBoca + py} s={sc} />
       ))}
       <Path d={arco(0)} fill={PAISAJE.hormigon} />
       <Path d={arco(5)} fill={PAISAJE.interiorTunel} />
@@ -512,9 +546,10 @@ export function Sombrilla({ x, y, s, v = 1 }: Pieza) {
   return (
     <En x={x} y={y} s={s}>
       <G transform={`scale(${v} 1)`}>
-        <Rect x={-2} y={-4} width={20} height={6} rx={1.5} fill={PAISAJE.toalla} />
-        <Line x1={0} y1={0} x2={2} y2={-24} stroke={PAISAJE.farola} strokeWidth={1.5} />
-        <Path d="M-12,-20 Q2,-34 16,-22 Z" fill={PAISAJE.sombrilla} />
+        <Rect x={-4} y={-5} width={18} height={7} rx={1.5} fill={PAISAJE.toalla} opacity={0.9} transform="rotate(-6)" />
+        <Line x1={1} y1={0} x2={3} y2={-24} stroke={PAISAJE.farola} strokeWidth={1.4} />
+        <Path d="M-11,-20 Q3,-33 17,-21 Z" fill={PAISAJE.sombrilla} />
+        <Path d="M-4,-25 Q3,-32 10,-26 L3,-20 Z" fill={PAISAJE.blanco} opacity={0.75} />
       </G>
     </En>
   );
@@ -792,43 +827,75 @@ export function FinPoblado({ x, y, nombre }: { x: number; y: number; nombre: str
   );
 }
 
-/** Franja de mar en un lateral, con orilla de arena, barcas y un faro. */
-export function Mar({ y0, y1, x, W }: { y0: number; y1: number; x: number; W: number }) {
-  const ondas: string[] = [];
-  for (let y = y0; y <= y1; y += 30) ondas.push(`${x + Math.sin(y / 40) * 6},${y}`);
-  const orilla = `M${W},${y0} L${ondas.join(' L')} L${W},${y1} Z`;
-  const arena = `M${W},${y0} L${ondas.map((p) => {
-    const [px, py] = p.split(',').map(Number);
-    return `${px - 12},${py}`;
-  }).join(' L')} L${W},${y1} Z`;
-  const barcas = [0.25, 0.62].map((f) => y0 + (y1 - y0) * f);
+/**
+ * Playa en el lateral derecho, entre `y0` e `y1`: arena desde `xArena`, orilla en `xAgua`
+ * con espuma, aguas más profundas mar adentro, sombrillas sobre la arena, barcas y un faro
+ * sobre un espigón de rocas.
+ */
+export function Mar({ y0, y1, xArena, xAgua, W }: { y0: number; y1: number; xArena: number; xAgua: number; W: number }) {
+  const paso = 24;
+  const filas: number[] = [];
+  for (let y = y0; y <= y1; y += paso) filas.push(y);
+  if (filas[filas.length - 1] !== y1) filas.push(y1);
+  // Bordes ondulados: la arena se estrecha y ensancha suavemente; la orilla forma pequeñas calas.
+  const arena = filas.map((y) => [xArena + Math.sin(y / 70) * 8, y] as const);
+  const orilla = filas.map((y) => [xAgua + Math.sin(y / 46 + 1) * 7 + Math.sin(y / 17) * 2, y] as const);
+  const hondo = filas.map((y) => [xAgua + 26 + Math.sin(y / 60 + 2) * 6, y] as const);
+  const linea = (pts: readonly (readonly [number, number])[]) => pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' L');
+  const remate = `L${W},${y1} L${W},${y0} Z`;
+  // Extremos redondeados para que la playa no empiece ni acabe con un corte recto.
+  const cierre = (pts: readonly (readonly [number, number])[], dy: number) => {
+    const [x, y] = dy < 0 ? pts[0] : pts[pts.length - 1];
+    return `${(x + 14).toFixed(1)},${(y + dy).toFixed(1)}`;
+  };
+  const zona = (pts: readonly (readonly [number, number])[]) => `M${cierre(pts, -14)} L${linea(pts)} L${cierre(pts, 14)} ${remate}`;
+
+  const largo = y1 - y0;
+  const espigon = y0 + largo * 0.46;
+  const xRocas = xAgua + 4;
+  const sombrillas = [0.14, 0.33, 0.72, 0.9]
+    .map((f) => y0 + largo * f)
+    .filter((y) => Math.abs(y - espigon) > 46)
+    .map((y, i) => ({ x: (xArena + xAgua) / 2 + (i % 2 ? 6 : -6), y }));
+  const barcas = [0.22, 0.68].map((f) => y0 + largo * f);
   return (
     <G>
-      <Path d={arena} fill={PAISAJE.arena} />
-      <Path d={orilla} fill={PAISAJE.agua} />
-      {Array.from({ length: Math.floor((y1 - y0) / 46) }, (_, i) => (
-        <Path
-          key={i}
-          d={`M${x + 18 + (i % 2) * 14},${y0 + 24 + i * 46} q4,-3 8,0 q4,-3 8,0`}
-          stroke={PAISAJE.espuma}
-          strokeWidth={1.2}
-          fill="none"
-          opacity={0.6}
-        />
+      <Path d={zona(arena)} fill={PAISAJE.arena} />
+      {/* Textura de la arena */}
+      {filas.slice(1, -1).map((y, i) => (
+        <Circle key={`g${y}`} cx={xArena + 10 + (azar(i * 3.3) * (xAgua - xArena - 20))} cy={y + azar(i * 5.1) * 10} r={0.9} fill={PAISAJE.arenaOscura} />
+      ))}
+      <Path d={zona(orilla)} fill={PAISAJE.agua} />
+      <Path d={zona(hondo)} fill={PAISAJE.aguaHonda} />
+      {/* Espuma a lo largo de la orilla */}
+      <Path d={`M${linea(orilla)}`} stroke={PAISAJE.espuma} strokeWidth={1.6} strokeOpacity={0.55} fill="none" />
+      <Path d={`M${linea(orilla.map(([x, y]) => [x + 6, y] as const))}`} stroke={PAISAJE.espuma} strokeWidth={0.8} strokeOpacity={0.25} strokeDasharray="10 14" fill="none" />
+      {sombrillas.map((p, i) => (
+        <Sombrilla key={`s${i}`} x={p.x} y={p.y} s={0.9} v={i % 2 ? -1 : 1} />
       ))}
       {barcas.map((by, i) => (
-        <G key={by} transform={`translate(${x + 30 + i * 8} ${by})`}>
+        <G key={by} transform={`translate(${Math.min(W - 12, xAgua + 30 + i * 6)} ${by})`}>
           <Path d="M-9,0 L9,0 L6,4 L-6,4 Z" fill={PAISAJE.cal} />
           <Line x1={0} y1={0} x2={0} y2={-14} stroke={PAISAJE.farola} strokeWidth={1} />
           <Polygon points="1,-13 1,-2 9,-2" fill={PAISAJE.blanco} opacity={0.8} />
         </G>
       ))}
-      <G transform={`translate(${x + 26} ${y0 + (y1 - y0) * 0.45})`}>
-        <Polygon points="-6,0 6,0 4,-36 -4,-36" fill={PAISAJE.blanco} opacity={0.9} />
-        <Rect x={-5} y={-24} width={10} height={5} fill={PAISAJE.rojo} opacity={0.8} />
-        <Rect x={-5} y={-42} width={10} height={6} fill={PAISAJE.oscuro} />
-        <Circle cx={0} cy={-39} r={8} fill={PAISAJE.luz} opacity={0.18} />
-        <Circle cx={0} cy={-39} r={2.4} fill={PAISAJE.luz} />
+      {/* Espigón de rocas que entra en el agua, con el faro encima */}
+      <G transform={`translate(${xRocas} ${espigon})`}>
+        <Polygon points="-14,8 -8,-2 2,-5 14,-3 26,1 30,9 18,13 2,13 -10,12" fill={PAISAJE.piedra} />
+        <Polygon points="-8,-2 2,-5 14,-3 10,3 -2,4" fill={PAISAJE.piedraClara} />
+        <Polygon points="20,4 32,2 40,8 34,13 22,12" fill={PAISAJE.piedra} />
+        <Path d="M-12,12 q8,4 18,1 q10,4 20,0 q8,3 14,-1" stroke={PAISAJE.espuma} strokeWidth={1.2} strokeOpacity={0.6} fill="none" />
+        <G transform="translate(8 -3)">
+          <Rect x={-8} y={-3} width={16} height={4} fill={PAISAJE.hormigon} />
+          <Polygon points="-6,-3 6,-3 4,-38 -4,-38" fill={PAISAJE.blanco} opacity={0.92} />
+          <Rect x={-5.2} y={-16} width={10.4} height={5} fill={PAISAJE.rojo} opacity={0.85} />
+          <Rect x={-4.6} y={-31} width={9.2} height={4.5} fill={PAISAJE.rojo} opacity={0.85} />
+          <Rect x={-5} y={-45} width={10} height={7} fill={PAISAJE.oscuro} />
+          <Polygon points="-6,-45 6,-45 0,-51" fill={PAISAJE.rojo} opacity={0.85} />
+          <Circle cx={0} cy={-41.5} r={9} fill={PAISAJE.luz} opacity={0.16} />
+          <Circle cx={0} cy={-41.5} r={2.4} fill={PAISAJE.luz} />
+        </G>
       </G>
     </G>
   );
@@ -1005,6 +1072,10 @@ export interface Bioma {
   farolas?: number;
   /** Elemento de fondo propio del bioma. */
   especial?: 'mar' | 'rio';
+  /** Posición horizontal media de la carretera (fracción del ancho; 0,5 por defecto). */
+  centro?: number;
+  /** Factor de amplitud del zigzag (1 por defecto). */
+  amplitud?: number;
 }
 
 /** Biomas del camino. Los tonos son apagados para que destaquen los niveles. */
@@ -1061,9 +1132,11 @@ export const BIOMAS: Record<BiomaId, Bioma> = {
     relleno: [['palmera', 3], ['arbusto', 1]],
     densidad: -0.22,
     suelo: true,
-    singulares: [{ tipo: 'sombrilla', peso: 3, grupo: 2 }],
-    separacion: 220,
+    singulares: [{ tipo: 'casa', peso: 1, escala: 0.85 }],
+    separacion: 380,
     especial: 'mar',
+    centro: 0.37,
+    amplitud: 0.65,
   },
   olivar: {
     fondo: '#15140E',
@@ -1202,8 +1275,8 @@ function porPeso<T>(opciones: [T, number][], r: number): T {
  * Reparte el paisaje alrededor de la carretera de forma estable (misma salida para el mismo ancho).
  * Cada franja tiene su bioma. La vegetación se reparte con un campo de densidad (bosquecillos,
  * parcelas de cultivo en hileras), los elementos singulares son escasos y separados, y las
- * construcciones se apiñan junto a la carretera. Cerca del límite entre franjas se mezclan los dos
- * biomas para que el cambio sea gradual.
+ * construcciones se apiñan junto a la carretera. Entre franjas hay un túnel, así que el cambio de
+ * bioma es neto.
  */
 export function componerPaisaje(e: EntradaComposicion): PiezaColocada[] {
   const { ancho: W, puntos, medio, reservas, zonas } = e;
@@ -1234,16 +1307,9 @@ export function componerPaisaje(e: EntradaComposicion): PiezaColocada[] {
   const zonaEn = (y: number) => zonas.find((z) => y >= z.y0 && y < z.y1) ?? zonas[zonas.length - 1];
   const urbano = (y: number) => !!BIOMAS[zonaEn(y).bioma].urbano;
   const medioEn = (y: number) => (urbano(y) ? medio.ciudad : medio.campo);
-  // Cerca del límite entre franjas se mezclan los dos biomas.
-  const MEZCLA = 170;
-  const biomaEn = (y: number, r: number): BiomaId => {
-    const i = zonas.findIndex((z) => y >= z.y0 && y < z.y1);
-    if (i < 0) return zonas[zonas.length - 1].bioma;
-    const z = zonas[i];
-    if (i > 0 && y - z.y0 < MEZCLA && r < 0.5 * (1 - (y - z.y0) / MEZCLA)) return zonas[i - 1].bioma;
-    if (i < zonas.length - 1 && z.y1 - y < MEZCLA && r < 0.5 * (1 - (z.y1 - y) / MEZCLA)) return zonas[i + 1].bioma;
-    return z.bioma;
-  };
+  // Cada franja tiene un único bioma: los túneles entre tramos marcan el cambio con claridad.
+  // (`_r` se conserva para no alterar la secuencia de azar de la composición.)
+  const biomaEn = (y: number, _r: number): BiomaId => zonaEn(y).bioma;
   /** Comprueba que una pieza de `alto` × 2·`medioAncho` cabe sin tocar la calzada ni las reservas. */
   const cabe = (x: number, y: number, alto: number, medioAncho: number, holgura = 6) => {
     const m = medioEn(y);
