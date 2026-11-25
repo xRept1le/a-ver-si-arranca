@@ -19,7 +19,9 @@ describe('contenido de demostración', () => {
     expect(niveles[1].id).toBe('senales-1');
     expect(camino).toHaveLength(15);
     const primero = camino[0];
-    expect(esPrevisto(primero) ? [] : primero.previstos?.map((n) => n.id)).toEqual(['conductor-2', 'conductor-3', 'conductor-4']);
+    expect(esPrevisto(primero) ? [] : primero.previstos?.map((n) => n.id)).toEqual(['conductor-2', 'conductor-3', 'conductor-4', 'conductor-5']);
+    // Cinco niveles por tramo, tengan o no preguntas.
+    for (const t of camino) expect(t.niveles.length + (esPrevisto(t) ? 0 : (t.previstos?.length ?? 0))).toBe(5);
   });
 
   it('las preguntas enlazan con apartados que existen en su capítulo', () => {

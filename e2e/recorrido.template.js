@@ -91,6 +91,12 @@ async (pagina, log) => {
     (await etiqueta('tramo-maniobras')).startsWith('Tramo 6') && (await etiqueta('tramo-eficiente')).startsWith('Tramo 15'),
     'Camino: incluye los 15 capítulos del temario',
   );
+  ok(
+    (await page.locator('[data-testid^="nivel-"]').count()) === 75 &&
+      (await estado('eficiente-5')) === 'Próximamente' &&
+      (await estado('senales-5')) === 'Próximamente',
+    'Camino: cinco niveles por tramo (75), los que no tienen preguntas en preparación',
+  );
   ok((await centroY('coche')) < (await centroY('nivel-conductor-1')), 'Coche: sin niveles completados, espera al principio de la carretera');
   await pulsar('nivel-via-2');
   await esperar('dialogo');

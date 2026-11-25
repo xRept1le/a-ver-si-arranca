@@ -53,7 +53,7 @@ Al comprobar se muestra: resultado (icono + texto «Correcto» / «Incorrecto»)
 - CA2.3 Tocar un nivel completado o disponible abre su lección; uno bloqueado muestra qué nivel falta.
 - CA2.4 Hay acceso directo a Mis errores (con número de pendientes) e icono de Ajustes.
 - CA2.5 Si todos los niveles están completados, «Continuar» propone repasar errores o un simulacro.
-- CA2.6 El camino tiene un tramo por cada capítulo del temario (15), en su orden. Los capítulos sin preguntas aparecen con 4 niveles «Próximamente» cada uno: no entran en la regla de desbloqueo y, al pulsarlos, se indica el nivel disponible.
+- CA2.6 El camino tiene un tramo por cada capítulo del temario (15), en su orden. Cada tramo muestra 5 niveles (75 en total). Los capítulos sin preguntas aparecen con 5 niveles «Próximamente» y los temas con preguntas se completan con niveles «Próximamente» hasta 5: no entran en la regla de desbloqueo y, al pulsarlos, se indica el nivel disponible.
 
 **R3. Temario.**
 - CA3.1 Índice de capítulos del permiso B marcado como provisional; solo el capítulo de demostración se puede abrir; el resto indica «Próximamente».

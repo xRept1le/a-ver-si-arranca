@@ -71,8 +71,8 @@ export const temas: Tema[] = [
   },
 ];
 
-/** Niveles de cada tema en el camino (2 bloques × 2 partes); los que falten aparecen como previstos. */
-const NIVELES_PREVISTOS = 4;
+/** Niveles de cada tema en el camino; los que aún no tienen preguntas aparecen como previstos. */
+const NIVELES_PREVISTOS = 5;
 
 const nivelesPrevistos = (id: string, desde: number) =>
   Array.from({ length: Math.max(0, NIVELES_PREVISTOS - desde) }, (_, i) => ({ id: `${id}-${desde + i + 1}`, numero: desde + i + 1 }));

@@ -221,11 +221,14 @@ export function CaminoNiveles() {
     zonas.forEach((z) => {
       const b = BIOMAS[z.bioma];
       if (b.especial === 'mar') {
-        // La playa ocupa el lateral derecho junto a los niveles del tramo; la carretera va desplazada hacia el interior.
+        // La playa ocupa el lateral derecho de todo el bioma: empieza justo bajo la falda de la
+        // cordillera de arriba y se pierde por detrás de la siguiente. La carretera va hacia el interior.
         const niv = elementos.filter((e): e is ElementoNivel => e.tipo === 'nivel' && e.y >= z.y0 && e.y < z.y1);
         if (niv.length) {
-          const y0 = niv[0].y - 10;
-          const y1 = niv[niv.length - 1].y + ALTO.nivel + 10;
+          const tunelAntes = elementos.filter((e) => e.tipo === 'tunel' && e.y < z.y0).pop();
+          const tunelDespues = elementos.find((e) => e.tipo === 'tunel' && e.y >= z.y0);
+          const y0 = tunelAntes ? tunelAntes.y + TUNEL_ENTRE.boca - 26 : z.y0;
+          const y1 = tunelDespues ? tunelDespues.y + TUNEL_ENTRE.cima + 44 : z.y1;
           const bordeCarretera = Math.max(...niv.map((e) => puntos[indiceDe(e)].x)) + OCUPA.campo;
           const xArena = Math.max(bordeCarretera + 18, W * 0.6);
           const xAgua = Math.max(xArena + 44, W * 0.79);

@@ -370,8 +370,8 @@ export function CartelOrientacion({
 /**
  * Ladera con la boca de un túnel en (x, yBoca), de la que sale la carretera de ancho `ancho`.
  * Sin `cima`, la ladera ocupa todo el ancho `W` desde y = 0 (túnel de salida del camino).
- * Con `cima`, es una cordillera que cruza la pantalla desde esa altura: la carretera entra
- * por detrás, por una boca en la cresta, y sale por la boca de abajo. Separa dos biomas.
+ * Con `cima`, es una cordillera que cruza la pantalla desde esa altura: la carretera pasa por
+ * detrás de la cresta y solo se ve la boca de salida, abajo. Separa dos biomas.
  */
 export function Tunel({ x, yBoca, ancho, W, cima, semilla = 0 }: { x: number; yBoca: number; ancho: number; W: number; cima?: number; semilla?: number }) {
   const w = ancho + 20;
@@ -380,7 +380,6 @@ export function Tunel({ x, yBoca, ancho, W, cima, semilla = 0 }: { x: number; yB
     `M${x - w / 2 + m},${yBoca} V${yBoca - h + w / 2} A${w / 2 - m},${w / 2 - m} 0 0 1 ${x + w / 2 - m},${yBoca - h + w / 2} V${yBoca} Z`;
   const pie = `V${yBoca - 40} C${W * 0.86},${yBoca - 58} ${W * 0.72},${yBoca - 6} ${x + w / 2 + 26},${yBoca + 2} H${x - w / 2 - 26} C${W * 0.28},${yBoca - 6} ${W * 0.14},${yBoca - 64} 0,${yBoca - 34} Z`;
   let ladera: string;
-  let crestaCentro = 0;
   if (cima === undefined) {
     ladera = `M0,0 H${W} ${pie}`;
   } else {
@@ -393,7 +392,6 @@ export function Tunel({ x, yBoca, ancho, W, cima, semilla = 0 }: { x: number; yB
       const py = cima + azar(semilla * 17 + i * 3.7) * 26 + cerca * 14;
       puntos.push(`${px.toFixed(1)},${py.toFixed(1)}`);
     }
-    crestaCentro = cima + 16;
     ladera = `M0,${yBoca - 34} L${puntos.join(' L')} L${W},${yBoca - 40} ${pie.replace(`V${yBoca - 40} `, '')}`;
   }
   const pinos: [number, number, number][] = [
@@ -414,19 +412,6 @@ export function Tunel({ x, yBoca, ancho, W, cima, semilla = 0 }: { x: number; yB
         fill="none"
         strokeLinecap="round"
       />
-      {cima !== undefined ? (
-        // Boca de entrada en la cresta, por donde se pierde la carretera.
-        <G>
-          <Path
-            d={`M${x - ancho / 2 - 4},${crestaCentro} A${ancho / 2 + 4},${ancho / 2 + 4} 0 0 0 ${x + ancho / 2 + 4},${crestaCentro} Z`}
-            fill={PAISAJE.hormigon}
-          />
-          <Path
-            d={`M${x - ancho / 2 + 1},${crestaCentro} A${ancho / 2 - 1},${ancho / 2 - 1} 0 0 0 ${x + ancho / 2 - 1},${crestaCentro} Z`}
-            fill={PAISAJE.interiorTunel}
-          />
-        </G>
-      ) : null}
       {pinos.map(([px, py, sc]) => (
         <Pino key={px} x={W * px} y={yBoca + py} s={sc} />
       ))}
@@ -983,11 +968,11 @@ const TAMANO: Record<TipoPieza, [alto: number, medio: number]> = {
   arbol: [53, 21],
   arbusto: [18, 14],
   hierba: [9, 3],
-  oveja: [24, 18],
-  vaca: [37, 22],
-  ciervo: [58, 18],
-  conejo: [28, 10],
-  molino: [72, 32],
+  oveja: [24, 21],
+  vaca: [38, 26],
+  ciervo: [60, 28],
+  conejo: [28, 12],
+  molino: [76, 36],
   fardo: [22, 11],
   casa: [34, 17],
   edificio: [0, 0],
@@ -995,7 +980,7 @@ const TAMANO: Record<TipoPieza, [alto: number, medio: number]> = {
   casaPueblo: [0, 0],
   iglesia: [68, 26],
   huerto: [16, 22],
-  palmera: [64, 24],
+  palmera: [66, 24],
   sombrilla: [30, 16],
   olivo: [33, 13],
   naranjo: [30, 11],
@@ -1003,19 +988,19 @@ const TAMANO: Record<TipoPieza, [alto: number, medio: number]> = {
   bodega: [34, 34],
   roca: [16, 14],
   pico: [70, 48],
-  cabra: [27, 12],
+  cabra: [28, 16],
   pinoNevado: [58, 18],
   cabana: [33, 18],
   cactus: [34, 10],
   matojo: [10, 5],
-  sauce: [36, 16],
+  sauce: [37, 16],
   junco: [20, 6],
   barraca: [38, 16],
   nave: [0, 0],
   grua: [84, 44],
   contenedores: [20, 22],
-  chimenea: [92, 18],
-  aerogenerador: [122, 38],
+  chimenea: [94, 25],
+  aerogenerador: [124, 38],
   placaSolar: [15, 14],
 };
 
@@ -1305,12 +1290,10 @@ export function componerPaisaje(e: EntradaComposicion): PiezaColocada[] {
     reservas.some((q) => x > q.x0 - r && x < q.x1 + r && y > q.y0 - r && y < q.y1 + r);
 
   const zonaEn = (y: number) => zonas.find((z) => y >= z.y0 && y < z.y1) ?? zonas[zonas.length - 1];
-  const urbano = (y: number) => !!BIOMAS[zonaEn(y).bioma].urbano;
+  const biomaEn = (y: number) => BIOMAS[zonaEn(y).bioma];
+  const urbano = (y: number) => !!biomaEn(y).urbano;
   const medioEn = (y: number) => (urbano(y) ? medio.ciudad : medio.campo);
-  // Cada franja tiene un único bioma: los túneles entre tramos marcan el cambio con claridad.
-  // (`_r` se conserva para no alterar la secuencia de azar de la composición.)
-  const biomaEn = (y: number, _r: number): BiomaId => zonaEn(y).bioma;
-  /** Comprueba que una pieza de `alto` × 2·`medioAncho` cabe sin tocar la calzada ni las reservas. */
+  /** Comprueba que una pieza de `alto` × 2·`medioAncho` no toca la calzada ni las reservas. */
   const cabe = (x: number, y: number, alto: number, medioAncho: number, holgura = 6) => {
     const m = medioEn(y);
     return [
@@ -1319,35 +1302,62 @@ export function componerPaisaje(e: EntradaComposicion): PiezaColocada[] {
       [x - medioAncho, y - alto],
       [x + medioAncho, y - alto],
       [x, y - alto / 2],
-    ].every(([px, py]) => distancia(px, py) > m + holgura && !reservado(px, py, 2) && py > 0);
+    ].every(([px, py]) => distancia(px, py) > m + holgura && !reservado(px, py, 2) && py > 0 && px > -4 && px < W + 4);
   };
 
-  const piezas: PiezaColocada[] = [];
-  const ocupados: { x: number; y: number; r: number }[] = [];
-  const libre = (x: number, y: number, r: number) => ocupados.every((o) => Math.hypot(o.x - x, o.y - y) > o.r + r);
-  const poner = (p: PiezaColocada, r: number) => {
-    piezas.push(p);
-    ocupados.push({ x: p.x, y: p.y, r });
+  // Cajas ocupadas por las piezas ya colocadas, indexadas en una rejilla para buscar rápido.
+  // Ninguna pieza se coloca si su caja (con un pequeño margen) toca otra.
+  const CELDA = 64;
+  const MARGEN = 3;
+  const rejilla = new Map<number, Zona[]>();
+  const celdas = (c: Zona) => {
+    const r: number[] = [];
+    for (let cx = Math.floor(c.x0 / CELDA); cx <= Math.floor(c.x1 / CELDA); cx++) {
+      for (let cy = Math.floor(c.y0 / CELDA); cy <= Math.floor(c.y1 / CELDA); cy++) r.push(cy * 1000 + cx);
+    }
+    return r;
   };
+  const caja = (x: number, y: number, medioAncho: number, alto: number): Zona => ({
+    x0: x - medioAncho - MARGEN,
+    x1: x + medioAncho + MARGEN,
+    y0: y - alto - MARGEN,
+    y1: y + MARGEN,
+  });
+  const libre = (c: Zona) =>
+    celdas(c).every((k) => (rejilla.get(k) ?? []).every((o) => c.x1 <= o.x0 || c.x0 >= o.x1 || c.y1 <= o.y0 || c.y0 >= o.y1));
+  const ocupar = (c: Zona) => {
+    for (const k of celdas(c)) {
+      const l = rejilla.get(k);
+      if (l) l.push(c);
+      else rejilla.set(k, [c]);
+    }
+  };
+  const piezas: PiezaColocada[] = [];
+  /** Coloca la pieza si su caja está libre. */
+  const poner = (p: PiezaColocada, medioAncho: number, alto: number) => {
+    const c = caja(p.x, p.y, medioAncho, alto);
+    if (!libre(c)) return false;
+    ocupar(c);
+    piezas.push(p);
+    return true;
+  };
+  const medida = (tipo: TipoPieza, esc: number) => [TAMANO[tipo][1] * esc, TAMANO[tipo][0] * esc] as const;
   let semilla = 1;
 
   // 1. Construcciones junto a la carretera (casas, edificios, naves).
-  const construcciones: PiezaColocada[] = [];
-  const solapa = (x: number, y: number, w: number) =>
-    construcciones.some((b) => Math.abs(b.x - x) < ((b.w ?? 0) + w) / 2 + 3 && Math.abs(b.y - y) < 26);
-  for (let y = 40; y < e.alto - 10; y += 28) {
-    for (let x = 12; x < W; x += 28) {
+  for (let y = 40; y < e.alto - 10; y += 30) {
+    for (let x = 14; x < W; x += 30) {
       semilla++;
       const jx = x + (azar(semilla * 2.1) - 0.5) * 10;
       const jy = y + (azar(semilla * 3.3) - 0.5) * 10;
-      const b = BIOMAS[biomaEn(jy, azar(semilla * 0.37))];
+      const b = biomaEn(jy);
       if (!b.junto) continue;
       const m = medioEn(jy);
       const d = distancia(jx, jy);
       if (d < m + 8) continue;
       const r = azar(semilla * 7.7);
-      const cerca = b.junto === 'nave' ? (d < m + 90 ? 0.32 : 0.06) : d < m + 70 ? 1 : d < m + 130 ? 0.4 : 0.1;
-      if (r > (b.junto === 'edificio' ? 0.5 : 0.55) * cerca) continue;
+      const cerca = b.junto === 'nave' ? (d < m + 90 ? 0.28 : 0.04) : d < m + 70 ? 1 : d < m + 130 ? 0.3 : 0.05;
+      if (r > (b.junto === 'edificio' ? 0.42 : 0.4) * cerca) continue;
       const z = zonaEn(jy);
       let w: number;
       let h: number;
@@ -1365,15 +1375,12 @@ export function componerPaisaje(e: EntradaComposicion): PiezaColocada[] {
         const centro = entre((jy - z.y0 - 60) / 260) * entre((z.y1 - jy - 60) / 260);
         w = 22 + Math.round(azar(semilla * 2.9) * 14);
         h = 30 + Math.round(azar(semilla * 4.3) * (14 + 46 * centro));
-        while (h >= 30 && !cabe(jx, jy, h, w / 2, 12)) h -= 12;
+        while (h >= 30 && (!cabe(jx, jy, h, w / 2, 12) || !libre(caja(jx, jy, w / 2, h)))) h -= 12;
         if (h < 30) continue;
         alto = h;
       }
-      if (!cabe(jx, jy, alto, w / 2, b.junto === 'edificio' ? 12 : 6) || solapa(jx, jy, w)) continue;
-      const tipo: TipoPieza = b.junto;
-      const p: PiezaColocada = { tipo, x: jx, y: jy, s: 1, v: 1, w, h, semilla };
-      construcciones.push(p);
-      piezas.push(p);
+      if (!cabe(jx, jy, alto, w / 2, b.junto === 'edificio' ? 12 : 6)) continue;
+      poner({ tipo: b.junto, x: jx, y: jy, s: 1, v: 1, w, h, semilla }, w / 2 + 3, alto);
     }
   }
 
@@ -1383,59 +1390,61 @@ export function componerPaisaje(e: EntradaComposicion): PiezaColocada[] {
   for (let y = 150; y < e.alto - 40; y += 40) {
     for (let intento = 0; intento < 4; intento++) {
       semilla++;
-      const bioma = biomaEn(y, azar(semilla * 0.53));
-      const b = BIOMAS[bioma];
-      if (!b.singulares.length || y - ultimo < (b.separacion ?? 300)) break;
+      const b = biomaEn(y);
+      if (!b.singulares.length || y - ultimo < (b.separacion ?? 360)) break;
       const opciones = b.singulares.filter((s) => s.maximo === undefined || (cuenta[s.tipo] ?? 0) < s.maximo);
       if (!opciones.length) break;
       const s = porPeso(opciones.map((o) => [o, o.peso] as [Singular, number]), azar(semilla * 5.3));
       const esc = s.escala ?? 1;
-      const [alto, medioAncho] = TAMANO[s.tipo];
+      const [medioAncho, alto] = medida(s.tipo, esc);
       const r = azar(semilla * 1.7);
       const x = s.borde ? (r < 0.5 ? 8 + r * 40 : W - 8 - (r - 0.5) * 40) : 30 + r * (W - 60);
       const v = (azar(semilla * 3.1) > 0.5 ? 1 : -1) as 1 | -1;
       const n = s.grupo ?? 1;
-      const ancho = medioAncho * esc + (n - 1) * 12;
-      if (!cabe(x, y, alto * esc, ancho, 24) || !libre(x, y, ancho + 10)) continue;
+      const anchoGrupo = medioAncho + (n - 1) * 14;
+      if (!cabe(x, y, alto, anchoGrupo, 24) || !libre(caja(x, y, anchoGrupo, alto))) continue;
+      let colocadas = 0;
       for (let k = 0; k < n; k++) {
-        const ox = x + (k - (n - 1) / 2) * 24 + (azar(semilla + k * 9) - 0.5) * 8;
-        const oy = y + (azar(semilla + k * 13) - 0.5) * 16;
-        poner({ tipo: s.tipo, x: ox, y: oy, s: esc * (0.92 + azar(semilla + k) * 0.16), v, semilla: semilla + k }, medioAncho * esc + 6);
+        // En los grupos, cada pieza a su distancia para que no se monten.
+        const ox = x + (k - (n - 1) / 2) * (medioAncho * 2 + 6);
+        const oy = y + (k % 2) * 8;
+        if (poner({ tipo: s.tipo, x: ox, y: oy, s: esc, v, semilla: semilla + k }, medioAncho, alto)) colocadas++;
       }
+      if (!colocadas) continue;
       cuenta[s.tipo] = (cuenta[s.tipo] ?? 0) + 1;
       ultimo = y;
       break;
     }
   }
 
-  // 3. Vegetación y cultivos con un campo de densidad: bosquecillos, parcelas en hileras y bordes más poblados.
+  // 3. Vegetación y cultivos con un campo de densidad: bosquecillos, parcelas en hileras y bordes algo más poblados.
   const fase1 = azar(7) * 6.28;
   const fase2 = azar(11) * 6.28;
-  for (let y = 10; y < e.alto; y += 24) {
-    for (let x = 6; x < W; x += 24) {
+  for (let y = 10; y < e.alto; y += 26) {
+    for (let x = 8; x < W; x += 26) {
       semilla++;
-      const bioma = biomaEn(y, azar(semilla * 9.7));
-      const b = BIOMAS[bioma];
-      const fila = Math.round(y / 24);
-      const jx = b.hileras ? x + (fila % 2) * 12 : x + (azar(semilla * 2.3) - 0.5) * 18;
-      const jy = b.hileras ? y : y + (azar(semilla * 4.1) - 0.5) * 18;
-      const borde = Math.max(0, 1 - Math.min(jx, W - jx) / 70) * (b.hileras ? 0.1 : 0.35);
+      const b = biomaEn(y);
+      const fila = Math.round(y / 26);
+      const jx = b.hileras ? x + (fila % 2) * 13 : x + (azar(semilla * 2.3) - 0.5) * 16;
+      const jy = b.hileras ? y : y + (azar(semilla * 4.1) - 0.5) * 16;
+      const borde = Math.max(0, 1 - Math.min(jx, W - jx) / 70) * (b.hileras ? 0.08 : 0.25);
       const densidad = 0.5 + 0.5 * Math.sin(jx * 0.021 + fase1) * Math.cos(jy * 0.013 + fase2) + borde + b.densidad;
       const d = distancia(jx, jy);
-      if (d < medioEn(jy) + 14 || reservado(jx, jy, 8)) continue;
+      if (d < medioEn(jy) + 16 || reservado(jx, jy, 8)) continue;
       const r = azar(semilla * 6.7);
-      if (b.relleno.length && densidad > (b.hileras ? 0.6 : 0.78) && (b.hileras || r < 0.75)) {
+      if (b.relleno.length && densidad > (b.hileras ? 0.68 : 0.86) && (b.hileras || r < 0.7)) {
         const tipo = porPeso(b.relleno, azar(semilla * 3.9));
-        const esc = b.hileras ? 0.9 + azar(semilla * 8.9) * 0.12 : 0.6 + azar(semilla * 8.9) * 0.45;
-        const [alto, medioAncho] = TAMANO[tipo];
-        if (!cabe(jx, jy, alto * esc, medioAncho * esc * 0.6, 6) || !libre(jx, jy, medioAncho * esc * 0.55)) continue;
-        poner({ tipo, x: jx, y: jy, s: esc, v: azar(semilla) > 0.5 ? 1 : -1, semilla }, medioAncho * esc * 0.55);
-      } else if (b.matorral && densidad > 0.6 && r < 0.16 && libre(jx, jy, 10)) {
+        const esc = b.hileras ? 0.9 + azar(semilla * 8.9) * 0.1 : 0.62 + azar(semilla * 8.9) * 0.4;
+        const [medioAncho, alto] = medida(tipo, esc);
+        if (!cabe(jx, jy, alto, medioAncho, 6)) continue;
+        poner({ tipo, x: jx, y: jy, s: esc, v: azar(semilla) > 0.5 ? 1 : -1, semilla }, medioAncho, alto);
+      } else if (b.matorral && densidad > 0.64 && r < 0.07) {
         const tipo = b.matorral[Math.floor(azar(semilla * 2.7) * b.matorral.length)];
-        const esc = 0.6 + r * 2;
-        if (cabe(jx, jy, TAMANO[tipo][0] * esc, TAMANO[tipo][1] * esc, 4)) poner({ tipo, x: jx, y: jy, s: esc, v: 1, semilla }, 10);
-      } else if (b.suelo && r > 0.9) {
-        piezas.push({ tipo: 'hierba', x: jx, y: jy, s: 1, v: 1, semilla });
+        const esc = 0.6 + r * 4;
+        const [medioAncho, alto] = medida(tipo, esc);
+        if (cabe(jx, jy, alto, medioAncho, 4)) poner({ tipo, x: jx, y: jy, s: esc, v: 1, semilla }, medioAncho, alto);
+      } else if (b.suelo && r > 0.95) {
+        poner({ tipo: 'hierba', x: jx, y: jy, s: 1, v: 1, semilla }, 3, 9);
       }
     }
   }
@@ -1447,7 +1456,7 @@ export function componerPaisaje(e: EntradaComposicion): PiezaColocada[] {
     const a = muestras[i - 1];
     const b = muestras[i];
     recorrido += Math.hypot(b.x - a.x, b.y - a.y);
-    const intervalo = BIOMAS[zonaEn(b.y).bioma].farolas;
+    const intervalo = biomaEn(b.y).farolas;
     if (!intervalo || recorrido < intervalo) continue;
     recorrido = 0;
     const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
@@ -1457,7 +1466,7 @@ export function componerPaisaje(e: EntradaComposicion): PiezaColocada[] {
     const px = b.x + nx * lado * separacion;
     const py = b.y + ny * lado * separacion;
     if (!reservado(px, py, 10) && py < e.alto - 20) {
-      piezas.push({ tipo: 'farola', x: px, y: py, s: 0.85, v: (nx * lado > 0 ? -1 : 1) as 1 | -1, semilla: i });
+      poner({ tipo: 'farola', x: px, y: py, s: 0.85, v: (nx * lado > 0 ? -1 : 1) as 1 | -1, semilla: i }, 8, 40);
     }
     lado = -lado;
   }
