@@ -74,6 +74,7 @@ Las cifras de Progreso se derivan de `respuestas`, `nivelesCompletados` y `simul
 
 ## Contenido de demostración
 
+- Temas 1 y 2 previstos (`temasPrevistos` en `src/content/demo/temas.ts`): figuran en el camino con 4 niveles sin preguntas cada uno y quedan fuera del desbloqueo, del progreso y del simulacro.
 - 3 temas × 4 niveles = 12 niveles; 15 preguntas por nivel (180 en total), en JSON dentro de `src/content/demo/`. Cada bloque temático de 30 preguntas se divide en «parte 1» y «parte 2». Un nivel se completa con 3 fallos como máximo.
 - El estado guardado pasa a la versión 2: al migrar se reinician los niveles completados (sus identificadores cambian) y se conservan respuestas, errores, simulacros y ajustes.
 - Capítulo legible: «Prioridad de paso», enlazado al tema del mismo nombre. Contiene la escena cenital (cruce sin señalizar).
@@ -94,4 +95,4 @@ Las cifras de Progreso se derivan de `respuestas`, `nivelesCompletados` y `simul
 - Fondo `#0B0B0C`, superficies `#16171A` / `#202227`, texto `#F2F2F3` / `#A0A3AB`, acento azul `#3B82F6`.
 - Corrección en lecciones y repasos: verde `#22C55E` para la respuesta correcta y naranja `#F97316` para la elegida incorrecta, con iconos ✓ / ✕ y texto. En resúmenes y listas, acierto y fallo siguen en grises con icono.
 - Recuadro de imagen 16:9 sobre las opciones; la escena cenital se dibuja dentro sin deformarse.
-- Camino de niveles: nodos circulares en línea vertical con ligero zigzag, conectados por un trazo gris que se vuelve azul hasta el nivel actual. Motivo propio: los nodos imitan el marcador de una señal circular y el tema se presenta como un «tramo» de carretera.
+- Camino de niveles (`src/ui/CaminoNiveles.tsx`, piezas en `src/ui/Paisaje.tsx`): una carretera en SVG que zigzaguea entre los niveles. La línea central es azul desde el primer tramo con preguntas hasta el nivel actual. Cada tema empieza con un cartel azul de orientación sobre un pórtico («Tramo N»). En los tramos de campo hay ovejas, vacas, ciervos, conejos, pinos, molinos y fardos; tras una señal de entrada a poblado, los dos últimos tramos tienen aceras, edificios con ventanas, farolas, semáforos y pasos de peatones. El camino termina en una línea de meta. Los tonos del paisaje son apagados para no competir con los niveles.

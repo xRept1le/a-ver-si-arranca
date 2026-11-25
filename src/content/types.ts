@@ -28,6 +28,26 @@ export interface Tema {
   niveles: Nivel[];
 }
 
+/** Nivel del camino que todavía no tiene preguntas. */
+export interface NivelPrevisto {
+  id: string;
+  numero: number;
+}
+
+/** Tema que ya figura en el camino pero aún no tiene preguntas ni forma parte del desbloqueo. */
+export interface TemaPrevisto {
+  previsto: true;
+  id: string;
+  titulo: string;
+  capituloId: string;
+  niveles: NivelPrevisto[];
+}
+
+/** Tramo del camino de Inicio: un tema con preguntas o uno previsto. */
+export type TramoCamino = Tema | TemaPrevisto;
+
+export const esPrevisto = (t: TramoCamino): t is TemaPrevisto => 'previsto' in t;
+
 export interface Apartado {
   id: string;
   titulo: string;

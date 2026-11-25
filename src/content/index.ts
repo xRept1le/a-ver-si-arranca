@@ -1,9 +1,10 @@
 import { capitulos } from './demo/capitulos';
-import { temas } from './demo/temas';
+import { camino, temas } from './demo/temas';
 import type { Capitulo, Nivel, Pregunta, Tema } from './types';
 
 export * from './types';
-export { capitulos, temas };
+/** `temas` solo incluye los que tienen preguntas; `camino` añade los previstos, en orden. */
+export { camino, capitulos, temas };
 
 export const ETIQUETA_DEMO = 'Demo · pendiente de revisión';
 

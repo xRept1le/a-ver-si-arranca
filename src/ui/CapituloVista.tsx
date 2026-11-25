@@ -4,11 +4,11 @@ import { ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getCapitulo, getTema, niveles, tituloNivel, type Nivel } from '@/content';
-import { SENALES } from '@/content/senales';
 import { estadosNiveles, nivelActual } from '@/domain/niveles';
 import type { Datos } from '@/domain/types';
 import { useDatos } from '@/store/useDatos';
-import { Boton, Cabecera, Dialogo, EstadoVacio, FilaEnlace, MarcaDemo } from './componentes';
+import { BannerCatalogo } from './CatalogoSenales';
+import { Boton, Cabecera, Dialogo, EstadoVacio, MarcaDemo } from './componentes';
 import { colores, espacio, radio, texto } from './tema';
 
 /** Nivel que abre «Practicar este tema» y su estado. */
@@ -75,6 +75,8 @@ export function CapituloVista({
         </Text>
         <MarcaDemo />
 
+        {modo === 'temario' && capitulo.catalogoSenales ? <BannerCatalogo testID="abrir-catalogo" /> : null}
+
         {modo === 'temario' && practica ? (
           <View style={{ gap: espacio.xs }}>
             <Boton
@@ -92,16 +94,6 @@ export function CapituloVista({
                   : `Abre «${tituloNivel(practica.nivel)}».`}
             </Text>
           </View>
-        ) : null}
-
-        {modo === 'temario' && capitulo.catalogoSenales ? (
-          <FilaEnlace
-            icono="grid-outline"
-            titulo="Catálogo de señales"
-            detalle={`${SENALES.length} señales del dosier, por tipo, con código, imagen y descripción`}
-            onPress={() => router.push('/temario/catalogo-senales')}
-            testID="abrir-catalogo"
-          />
         ) : null}
 
         {!capitulo.legible ? (

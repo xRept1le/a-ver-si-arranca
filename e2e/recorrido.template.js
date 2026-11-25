@@ -62,6 +62,17 @@ async (pagina, log) => {
   // Estado inicial
   ok((await vis('estado-senales-1').innerText()) === 'Empezar', 'Inicio: primer nivel disponible');
   ok((await vis('estado-senales-2').innerText()) === 'Bloqueado', 'Inicio: segundo nivel bloqueado');
+  ok(
+    (await vis('tramo-conductor').innerText()).toLowerCase().includes('tramo 1') &&
+      (await vis('tramo-via').innerText()).toLowerCase().includes('tramo 2') &&
+      (await vis('tramo-senales').innerText()).toLowerCase().includes('tramo 3'),
+    'Camino: los temas 1 y 2 van antes de Señales',
+  );
+  ok((await vis('estado-conductor-1').innerText()) === 'Próximamente', 'Camino: los niveles de los temas 1 y 2 están en preparación');
+  await pulsar('nivel-via-2');
+  await esperar('dialogo');
+  ok((await vis('dialogo').innerText()).includes('Señales · Nivel 1'), 'Camino: un nivel en preparación remite al nivel disponible');
+  await pulsar('dialogo-cancelar');
   await pulsar('tab-progreso');
   await esperar('progreso-vacio');
   ok(!(await page.getByText('%').count()), 'Progreso sin actividad: estado inicial sin porcentajes');
@@ -150,6 +161,11 @@ async (pagina, log) => {
   // Temario
   await pulsar('tab-temario');
   await esperar('pantalla-temario');
+  await pulsar('abrir-catalogo-temario');
+  await esperar('pantalla-catalogo');
+  ok(true, 'Temario: el banner del índice abre el catálogo de señales');
+  await atras();
+  await esperar('pantalla-temario');
   await pulsar('capitulo-prioridad');
   await esperar('practicar-tema');
   ok((await vis('practicar-detalle').innerText()).includes('Señales · Nivel 2'), 'Temario: tema bloqueado indica el nivel que falta');
@@ -160,6 +176,7 @@ async (pagina, log) => {
 
   // Catálogo de señales
   const FOTOS = '/projects/sandbox/.kiro/artifacts/screenshots/';
+  await page.screenshot({ path: FOTOS + 'capitulo-senales-banner.png' });
   await pulsar('abrir-catalogo');
   await esperar('pantalla-catalogo');
   ok((await vis('familia-peligro').innerText()).includes('51 señales'), 'Catálogo: familia de peligro con 51 señales');

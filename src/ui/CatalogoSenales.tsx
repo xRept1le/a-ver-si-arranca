@@ -89,6 +89,43 @@ function FilaTipo({ tipo }: { tipo: TipoSenal }) {
   );
 }
 
+/** Señales reconocibles para la portada del banner. */
+const PORTADA = ['r-2', 'r-1', 'p-20', 'r-301', 's-17'];
+
+/** Acceso destacado al catálogo: tarjeta con muestras de señales y botón. */
+export function BannerCatalogo({ testID, compacto }: { testID: string; compacto?: boolean }) {
+  const muestras = PORTADA.map((id) => SENALES.find((s) => s.imagen === id)).filter((s): s is SenalCatalogo => !!s);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Abrir el catálogo de señales: ${SENALES.length} señales con imagen y descripción`}
+      testID={testID}
+      onPress={() => router.push('/temario/catalogo-senales')}
+      style={({ pressed }) => [styles.banner, pressed && { opacity: 0.9 }]}
+    >
+      <View style={styles.bannerMuestras}>
+        {muestras.map((s) => (
+          <View key={s.imagen} style={styles.bannerMuestra}>
+            <Image source={imagenSenal(s)} style={styles.imagen} resizeMode="contain" accessibilityIgnoresInvertColors />
+          </View>
+        ))}
+      </View>
+      <View style={{ gap: espacio.xs }}>
+        <Text style={[texto.etiqueta, { color: colores.acento }]}>Consulta</Text>
+        <Text style={[texto.titulo, { fontSize: compacto ? 22 : 24 }]}>Catálogo de señales</Text>
+        <Text style={texto.cuerpo}>
+          {`Las ${SENALES.length} señales del dosier, con su código, imagen y descripción, ordenadas por tipo.`}
+        </Text>
+      </View>
+      <View style={styles.bannerBoton}>
+        <Icono nombre="grid" color={colores.sobreAcento} tam={20} />
+        <Text style={styles.bannerBotonTexto}>Abrir catálogo</Text>
+        <Icono nombre="arrow-forward" color={colores.sobreAcento} tam={20} />
+      </View>
+    </Pressable>
+  );
+}
+
 /** Índice del catálogo: familias del dosier y, dentro, sus tipos. */
 export function IndiceCatalogo() {
   return (
@@ -323,4 +360,31 @@ const styles = StyleSheet.create({
     borderTopColor: colores.borde,
   },
   fichaPosicion: { minWidth: 56, textAlign: 'center' },
+  banner: {
+    backgroundColor: colores.acentoSuave,
+    borderWidth: 2,
+    borderColor: colores.acento,
+    borderRadius: radio.l,
+    padding: espacio.l,
+    gap: espacio.m,
+  },
+  bannerMuestras: { flexDirection: 'row', gap: espacio.s },
+  bannerMuestra: {
+    flex: 1,
+    aspectRatio: 1,
+    maxWidth: 64,
+    backgroundColor: colores.superficieAlta,
+    borderRadius: radio.s,
+    padding: 3,
+  },
+  bannerBoton: {
+    minHeight: 52,
+    borderRadius: radio.m,
+    backgroundColor: colores.acentoRelleno,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: espacio.s,
+  },
+  bannerBotonTexto: { fontSize: 16, fontWeight: '700', color: colores.sobreAcento },
 });

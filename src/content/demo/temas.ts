@@ -1,4 +1,4 @@
-import type { Nivel, Pregunta, Tema } from '../types';
+import type { Nivel, Pregunta, Tema, TemaPrevisto, TramoCamino } from '../types';
 import prioridad1 from './preguntas/prioridad-1.json';
 import prioridad2 from './preguntas/prioridad-2.json';
 import senales1 from './preguntas/senales-1.json';
@@ -62,3 +62,25 @@ export const temas: Tema[] = [
     ]),
   },
 ];
+
+/** Niveles previstos por tema sin preguntas, como los temas actuales (2 bloques × 2 partes). */
+const NIVELES_PREVISTOS = 4;
+
+function previsto(id: string, titulo: string, capituloId: string): TemaPrevisto {
+  return {
+    previsto: true,
+    id,
+    titulo,
+    capituloId,
+    niveles: Array.from({ length: NIVELES_PREVISTOS }, (_, i) => ({ id: `${id}-${i + 1}`, numero: i + 1 })),
+  };
+}
+
+/** Temas 1 y 2 del temario: ya están en el camino, pero sus preguntas aún no existen. */
+export const temasPrevistos: TemaPrevisto[] = [
+  previsto('conductor', 'El conductor y el permiso B', 'conductor'),
+  previsto('via', 'La vía y sus usuarios', 'via'),
+];
+
+/** Tramos del camino de Inicio en el orden del temario. */
+export const camino: TramoCamino[] = [...temasPrevistos, ...temas];

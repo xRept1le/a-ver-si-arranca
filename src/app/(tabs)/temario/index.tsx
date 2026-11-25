@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { capitulos } from '@/content';
+import { BannerCatalogo } from '@/ui/CatalogoSenales';
 import { Icono, MarcaDemo, Pantalla } from '@/ui/componentes';
 import { colores, espacio, radio, texto } from '@/ui/tema';
 
@@ -15,6 +16,7 @@ export default function Temario() {
         <Text style={texto.suave}>Índice provisional del teórico del permiso B.</Text>
         <MarcaDemo />
       </View>
+      <BannerCatalogo testID="abrir-catalogo-temario" compacto />
       <View style={{ gap: espacio.s }}>
         {capitulos.map((c) => {
           const abrible = c.legible || !!c.temaId;
