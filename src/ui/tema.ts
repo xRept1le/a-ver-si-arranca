@@ -1,7 +1,8 @@
 /**
- * Identidad visual: base negra y gris, azul como único acento
- * (acciones, selección y nivel actual). Aciertos, fallos y bloqueos
- * se distinguen con iconos y texto, no solo con tonos.
+ * Identidad visual: base negra y gris, azul como acento de acciones,
+ * selección y nivel actual. Al corregir una pregunta se usan verde
+ * (correcta) y naranja (opción elegida incorrecta). Aciertos, fallos y
+ * bloqueos se distinguen además con iconos y texto.
  */
 export const colores = {
   fondo: '#0B0B0C',
@@ -17,9 +18,14 @@ export const colores = {
   /** Acento para rellenos con texto blanco encima (contraste AA). */
   acentoRelleno: '#2563EB',
   acentoSuave: 'rgba(59,130,246,0.14)',
-  /** Acierto y fallo: grises claros/oscuros diferenciados por icono y texto. */
+  /** Acierto y fallo fuera de la corrección (resúmenes, listas): grises con icono y texto. */
   acierto: '#E6E7EA',
   fallo: '#8B8F99',
+  /** Corrección de preguntas en lecciones y repasos, siempre acompañada de icono y texto. */
+  correcto: '#22C55E',
+  correctoSuave: 'rgba(34,197,94,0.14)',
+  incorrecto: '#F97316',
+  incorrectoSuave: 'rgba(249,115,22,0.14)',
   sobreAcento: '#FFFFFF',
 } as const;
 

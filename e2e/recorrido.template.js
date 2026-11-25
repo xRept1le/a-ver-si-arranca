@@ -77,13 +77,16 @@ async (pagina, log) => {
   ok(!(await visible('tab-inicio')), 'Lección: barra de pestañas oculta');
   ok(await vis('comprobar').isDisabled(), 'Lección: «Comprobar» desactivado sin opción elegida');
   const primera = await responder(true);
-  ok((await vis('resultado-fallo').innerText()).includes('Respuesta correcta'), 'Fallo: muestra resultado, respuesta correcta y explicación');
+  ok((await vis('explicacion').innerText()).includes('Respuesta correcta'), 'Fallo: muestra resultado, respuesta correcta y explicación');
+  ok((await vis('estado-opcion-' + R[primera]).innerText()).toLowerCase().includes('respuesta correcta'), 'Fallo: la opción correcta queda señalada');
+  ok((await vis('celda-0').getAttribute('data-testid')) === 'celda-0' && (await page.locator('[data-testid^="celda-"]:visible').count()) === 15, 'Lección: 15 recuadros de preguntas');
+  ok(await visible('marco-imagen'), 'Lección: recuadro de imagen sobre las opciones');
   await pulsar('ver-temario');
   await esperar('pantalla-capitulo');
   ok((await page.locator('[data-testid^="apartado-"]:visible').count()) > 0, 'Fallo: «Ver en el temario» abre el capítulo');
   await atras();
   await esperar('continuar');
-  ok((await vis('contador').innerText()) === '1/30', 'Al volver del temario la lección sigue en la misma pregunta');
+  ok((await vis('contador').innerText()) === '1/15', 'Al volver del temario la lección sigue en la misma pregunta');
 
   // Cerrar y reabrir (se cierra la pestaña a mitad de lección y se abre otra)
   const nueva = await page.context().newPage();
@@ -156,7 +159,7 @@ async (pagina, log) => {
   await esperar('practicar-tema');
   await pulsar('practicar-tema');
   await esperar('sesion');
-  ok((await preguntaId()).startsWith('sen2-'), 'Temario: «Practicar este tema» abre la lección disponible');
+  ok((await preguntaId()) === 'sen1-16', 'Temario: «Practicar este tema» abre la lección disponible');
 
   // Nivel no superado
   await sesion([0, 1, 2, 3]);
@@ -209,7 +212,7 @@ async (pagina, log) => {
   ok((await id('tab-inicio').count()) === 1, 'Ver en Progreso vuelve a las pestañas existentes, sin duplicarlas');
   ok(await visible('historial-1'), 'Progreso: historial con los dos simulacros');
   ok((await vis('historial-0').innerText()).includes('Tiempo agotado'), 'Progreso: el último simulacro figura como tiempo agotado');
-  ok((await vis('lecciones-completadas').innerText()) === '1 de 6', 'Progreso: 1 lección completada');
+  ok((await vis('lecciones-completadas').innerText()) === '1 de 12', 'Progreso: 1 lección completada');
   const aciertos = Number((await vis('aciertos-senales').innerText()).split(' ')[0]);
   const fallos = Number((await vis('fallos-senales').innerText()).split(' ')[0]);
   ok(aciertos > 0 && fallos > 0, `Progreso: Señales con ${aciertos} aciertos y ${fallos} fallos`);

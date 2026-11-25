@@ -1,12 +1,13 @@
 import { router, useNavigation, usePreventRemove } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type ScrollViewInstance } from 'react-native';
 
 import type { Pregunta } from '@/content';
 import { getPregunta } from '@/content';
 import { nuevoId, useDatos } from '@/store/useDatos';
-import { BarraProgreso, Boton, Cabecera, Dialogo, Icono, Pantalla } from './componentes';
+import { Boton, Cabecera, Dialogo, Icono, Pantalla } from './componentes';
 import { PreguntaVista } from './PreguntaVista';
+import { RejillaPreguntas } from './RejillaPreguntas';
 import { colores, espacio, radio, texto } from './tema';
 
 export interface ResultadoSesion {
@@ -39,6 +40,8 @@ export function SesionPractica({
   const [elegida, setElegida] = useState<number>();
   const [comprobada, setComprobada] = useState(false);
   const [falladas, setFalladas] = useState<string[]>([]);
+  const [resultados, setResultados] = useState<(boolean | undefined)[]>([]);
+  const scroll = useRef<ScrollViewInstance>(null);
   const [resultado, setResultado] = useState<ResultadoSesion>();
   const [salida, setSalida] = useState<{ accion: unknown } | null>(null);
   const navigation = useNavigation();
@@ -68,7 +71,14 @@ export function SesionPractica({
     const ok = elegida === pregunta.correcta;
     registrar(pregunta.id, ok, origen, sesionId);
     if (!ok) setFalladas((f) => [...f, pregunta.id]);
+    setResultados((r) => {
+      const n = [...r];
+      n[indice] = ok;
+      return n;
+    });
     setComprobada(true);
+    // Deja a la vista las opciones corregidas y la explicación.
+    setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 50);
   };
 
   const continuar = () => {
@@ -76,6 +86,7 @@ export function SesionPractica({
       setIndice(indice + 1);
       setElegida(undefined);
       setComprobada(false);
+      scroll.current?.scrollTo({ y: 0, animated: false });
       return;
     }
     const r = { aciertos: preguntas.length - falladas.length, fallos: falladas.length, falladas };
@@ -88,6 +99,7 @@ export function SesionPractica({
   return (
     <Pantalla
       testID="sesion"
+      scrollRef={scroll}
       cabecera={
         <View style={styles.cabecera}>
           <Cabecera
@@ -95,39 +107,19 @@ export function SesionPractica({
             iconoAtras="close"
             derecha={<Text style={texto.suave} testID="contador">{`${indice + 1}/${preguntas.length}`}</Text>}
           />
-          <View style={{ paddingHorizontal: espacio.l }}>
-            <BarraProgreso
-              valor={(indice + (comprobada ? 1 : 0)) / preguntas.length}
-              etiqueta={`Pregunta ${indice + 1} de ${preguntas.length}`}
-            />
-          </View>
+          <RejillaPreguntas total={preguntas.length} actual={indice} resultados={resultados} />
         </View>
       }
       pie={
         comprobada ? (
           <>
-            <View style={styles.resultado} testID={acierto ? 'resultado-acierto' : 'resultado-fallo'} accessibilityLiveRegion="polite">
-              <View style={styles.filaResultado}>
-                <Icono nombre={acierto ? 'checkmark-circle' : 'close-circle'} color={acierto ? colores.acierto : colores.fallo} tam={26} />
-                <Text style={texto.subtitulo}>{acierto ? 'Correcto' : 'Incorrecto'}</Text>
-              </View>
-              <Text style={texto.suave}>
-                Respuesta correcta: <Text style={{ color: colores.texto, fontWeight: '700' }}>{pregunta.opciones[pregunta.correcta]}</Text>
-              </Text>
-              {!acierto ? <Text style={texto.cuerpo}>{pregunta.explicacion}</Text> : null}
-              {capituloId ? (
-                <Pressable
-                  accessibilityRole="link"
-                  testID="ver-temario"
-                  onPress={() =>
-                    router.push({ pathname: '/lectura/[capitulo]', params: { capitulo: capituloId, apartado: pregunta.apartado } })
-                  }
-                  style={styles.enlace}
-                >
-                  <Icono nombre="book-outline" color={colores.acento} tam={18} />
-                  <Text style={styles.enlaceTexto}>Ver en el temario</Text>
-                </Pressable>
-              ) : null}
+            <View
+              style={[styles.filaResultado, { borderColor: acierto ? colores.correcto : colores.incorrecto }]}
+              testID={acierto ? 'resultado-acierto' : 'resultado-fallo'}
+              accessibilityLiveRegion="polite"
+            >
+              <Icono nombre={acierto ? 'checkmark-circle' : 'close-circle'} color={acierto ? colores.correcto : colores.incorrecto} tam={26} />
+              <Text style={texto.subtitulo}>{acierto ? 'Correcto' : 'Incorrecto'}</Text>
             </View>
             <Boton titulo={indice + 1 < preguntas.length ? 'Continuar' : 'Ver resumen'} onPress={continuar} testID="continuar" />
           </>
@@ -137,6 +129,32 @@ export function SesionPractica({
       }
     >
       <PreguntaVista key={pregunta.id} pregunta={pregunta} elegida={elegida} onElegir={setElegida} comprobada={comprobada} />
+      {comprobada ? (
+        <View style={styles.explicacion} testID="explicacion">
+          {!acierto ? (
+            <>
+              <Text style={texto.suave}>
+                Respuesta correcta:{' '}
+                <Text style={{ color: colores.texto, fontWeight: '700' }}>{pregunta.opciones[pregunta.correcta]}</Text>
+              </Text>
+              <Text style={texto.cuerpo}>{pregunta.explicacion}</Text>
+            </>
+          ) : null}
+          {capituloId ? (
+            <Pressable
+              accessibilityRole="link"
+              testID="ver-temario"
+              onPress={() =>
+                router.push({ pathname: '/lectura/[capitulo]', params: { capitulo: capituloId, apartado: pregunta.apartado } })
+              }
+              style={styles.enlace}
+            >
+              <Icono nombre="book-outline" color={colores.acento} tam={18} />
+              <Text style={styles.enlaceTexto}>Ver en el temario</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
       <Dialogo
         visible={!!salida}
         titulo={origen === 'leccion' ? '¿Salir de la lección?' : '¿Salir del repaso?'}
@@ -155,15 +173,24 @@ export function SesionPractica({
 
 const styles = StyleSheet.create({
   cabecera: { paddingBottom: espacio.s },
-  resultado: {
+  filaResultado: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espacio.s,
+    paddingHorizontal: espacio.m,
+    paddingVertical: espacio.s,
+    borderRadius: radio.m,
+    borderWidth: 1,
+    backgroundColor: colores.superficie,
+  },
+  explicacion: {
     backgroundColor: colores.superficie,
     borderRadius: radio.m,
-    padding: espacio.m,
+    padding: espacio.l,
     gap: espacio.xs,
     borderWidth: 1,
     borderColor: colores.borde,
   },
-  filaResultado: { flexDirection: 'row', alignItems: 'center', gap: espacio.s },
   enlace: { flexDirection: 'row', alignItems: 'center', gap: espacio.xs, minHeight: 44, alignSelf: 'flex-start' },
   enlaceTexto: { color: colores.acento, fontWeight: '700', fontSize: 15 },
 });

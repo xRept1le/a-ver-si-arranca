@@ -1,9 +1,9 @@
 # Requisitos · Base navegable de «A Ver si Arranca»
 
 Estado: aprobada el 25-11-2026 con estas decisiones:
-- Un nivel tiene 30 preguntas y se completa con 3 fallos como máximo.
-- Acierto y fallo se distinguen con grises, iconos ✓/✕ y texto; el azul es el único acento.
-- Demo: 3 temas × 2 niveles; simulacro de 6 preguntas y 3 minutos (máximo 1 fallo).
+- Un nivel tiene 15 preguntas (cambio del 25-11-2026; antes 30) y se completa con 3 fallos como máximo.
+- Al corregir una pregunta de lección o repaso: la opción elegida se marca en verde si es correcta y en naranja si es incorrecta; la correcta se marca en verde. Siempre con icono y texto. Fuera de la corrección, el azul es el único acento.
+- Demo: 3 temas × 4 niveles; simulacro de 6 preguntas y 3 minutos (máximo 1 fallo).
 - Comprobación con `tsc`, Jest y recorrido web con Playwright; prueba en Android real a cargo del usuario.
 Plataforma: Android (Expo + React Native + TypeScript).
 Todo el contenido de preguntas y temario de esta fase es **de demostración, pendiente de revisión**.
@@ -19,7 +19,7 @@ Excluido: cuentas, servidor, anuncios, pagos, banco definitivo de preguntas, mod
 ### Nivel
 | Estado | Cuándo | Cómo se ve (además del color) |
 |---|---|---|
-| Completado | Se han respondido las 30 preguntas con 3 fallos como máximo, al menos una vez | Icono ✓ y texto «Completado». Se puede repetir |
+| Completado | Se han respondido las 15 preguntas con 3 fallos como máximo, al menos una vez | Icono ✓ y texto «Completado». Se puede repetir |
 | Disponible (actual) | Primer nivel no completado | Nodo azul, más grande, texto «Empezar» |
 | Bloqueado | Su nivel anterior no está completado | Icono de candado y texto «Bloqueado». No navega |
 
@@ -60,13 +60,14 @@ Al comprobar se muestra: resultado (icono + texto «Correcto» / «Incorrecto»)
 - CA3.3 «Practicar este tema» abre la lección asociada si está disponible o completada; si está bloqueada, indica qué nivel falta.
 
 **R4. Lección.**
-- CA4.1 Preguntas de tres opciones, sin límite de tiempo, con barra de progreso.
+- CA4.1 Preguntas de tres opciones, sin límite de tiempo. Arriba hay un recuadro numerado por pregunta, como en el simulador, que marca la actual y el resultado de las ya respondidas (✓ verde, ✕ naranja).
 - CA4.2 «Comprobar» solo se activa con una opción elegida.
 - CA4.3 Tras comprobar se cumple lo descrito en «Pregunta (lección)».
 - CA4.4 «Ver en el temario» abre el apartado relacionado.
-- CA4.5 Al menos una pregunta incluye una escena cenital estática.
+- CA4.5 Sobre las opciones hay un recuadro horizontal (16:9) para la imagen de la pregunta. Mientras no haya imagen muestra un hueco reservado. Al menos una pregunta incluye en él una escena cenital estática.
 - CA4.6 Al terminar se muestra un resumen (aciertos, fallos, «Nivel completado» o «No superado: máximo 3 fallos») y los fallos se guardan en Mis errores.
-- CA4.7 Cada nivel tiene 30 preguntas.
+- CA4.7 Cada nivel tiene 15 preguntas.
+- CA4.8 Al comprobar: opción elegida correcta en verde; elegida incorrecta en naranja y la correcta en verde, con texto «Tu respuesta · correcta/incorrecta» o «Respuesta correcta».
 
 **R5. Simulador.**
 - CA5.1 Pantalla de preparación con número de preguntas, tiempo y la etiqueta «Simulacro de demostración».

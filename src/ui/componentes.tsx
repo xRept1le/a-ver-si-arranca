@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import type { ComponentProps, ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import type { ComponentProps, ReactNode, Ref } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ETIQUETA_DEMO } from '@/content';
@@ -22,14 +22,16 @@ interface PantallaProps {
   /** En pantallas con pestañas, la barra ya respeta el área segura inferior. */
   enPestanas?: boolean;
   scroll?: boolean;
+  scrollRef?: Ref<ScrollViewInstance>;
   testID?: string;
 }
 
-export function Pantalla({ children, cabecera, pie, enPestanas, scroll = true, testID }: PantallaProps) {
+export function Pantalla({ children, cabecera, pie, enPestanas, scroll = true, scrollRef, testID }: PantallaProps) {
   const insets = useSafeAreaInsets();
   const inferior = enPestanas ? 0 : insets.bottom;
   const contenido = scroll ? (
     <ScrollView
+      ref={scrollRef}
       style={styles.flex}
       contentContainerStyle={[styles.contenido, { paddingBottom: (pie ? espacio.l : espacio.xxl) + (pie ? 0 : inferior) }]}
       keyboardShouldPersistTaps="handled"
@@ -191,19 +193,6 @@ export function EstadoVacio({ icono, titulo, texto: t, children }: { icono: Nomb
   );
 }
 
-export function BarraProgreso({ valor, etiqueta }: { valor: number; etiqueta: string }) {
-  return (
-    <View
-      accessibilityRole="progressbar"
-      accessibilityLabel={etiqueta}
-      accessibilityValue={{ min: 0, max: 100, now: Math.round(valor * 100) }}
-      style={styles.barra}
-    >
-      <View style={[styles.barraRelleno, { width: `${Math.min(100, Math.max(0, valor * 100))}%` }]} />
-    </View>
-  );
-}
-
 /** Diálogo de confirmación propio (Alert no funciona en la versión web). */
 export function Dialogo({
   visible,
@@ -307,8 +296,6 @@ export const styles = StyleSheet.create({
   },
   marcaDemoTexto: { fontSize: 12, color: colores.textoSuave, fontWeight: '600' },
   vacio: { alignItems: 'center', gap: espacio.s, paddingVertical: espacio.xl, paddingHorizontal: espacio.l },
-  barra: { height: 8, borderRadius: radio.total, backgroundColor: colores.superficieAlta, overflow: 'hidden', flex: 1 },
-  barraRelleno: { height: '100%', backgroundColor: colores.acento, borderRadius: radio.total },
   velo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: espacio.xl },
   dialogo: { backgroundColor: colores.superficie, borderRadius: radio.l, padding: espacio.xl, gap: espacio.s, borderWidth: 1, borderColor: colores.borde },
 });

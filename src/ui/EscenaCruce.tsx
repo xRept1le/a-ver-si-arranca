@@ -2,7 +2,7 @@ import { View } from 'react-native';
 import Svg, { G, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
 
 import type { EscenaId } from '@/content';
-import { colores, radio } from './tema';
+import { colores } from './tema';
 
 const ASFALTO = '#2A2C31';
 const ACERA = '#16171A';
@@ -49,17 +49,15 @@ function CruceSinSenalizar() {
   );
 }
 
+const DESCRIPCION: Record<EscenaId, string> = {
+  'cruce-sin-senalizar':
+    'Vista cenital de un cruce sin señalizar. El vehículo A, el suyo, se dirige hacia el cruce desde abajo. El vehículo B se acerca desde la derecha de A.',
+};
+
+/** Escena estática. Ocupa todo el marco que la contiene, sin deformarse. */
 export function Escena({ id }: { id: EscenaId }) {
-  const descripcion =
-    'Vista cenital de un cruce sin señalizar. El vehículo A, el suyo, se dirige hacia el cruce desde abajo. El vehículo B se acerca desde la derecha de A.';
   return (
-    <View
-      accessible
-      accessibilityRole="image"
-      accessibilityLabel={descripcion}
-      testID={`escena-${id}`}
-      style={{ aspectRatio: 300 / 220, borderRadius: radio.m, overflow: 'hidden', borderWidth: 1, borderColor: colores.borde }}
-    >
+    <View accessible accessibilityRole="image" accessibilityLabel={DESCRIPCION[id]} testID={`escena-${id}`} style={{ flex: 1 }}>
       {id === 'cruce-sin-senalizar' ? <CruceSinSenalizar /> : null}
     </View>
   );

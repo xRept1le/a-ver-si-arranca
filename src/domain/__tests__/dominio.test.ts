@@ -6,10 +6,12 @@ import { corregirSimulacro, formatoTiempo, generarSimulacro } from '../simulacro
 import type { RegistroError, Respuesta } from '../types';
 
 describe('contenido de demostración', () => {
-  it('tiene 3 temas, 6 niveles y 30 preguntas por nivel', () => {
+  it('tiene 3 temas, 12 niveles y 15 preguntas por nivel sin repetir preguntas', () => {
     expect(temas).toHaveLength(3);
-    expect(niveles).toHaveLength(6);
-    for (const n of niveles) expect(n.preguntas).toHaveLength(30);
+    expect(niveles).toHaveLength(12);
+    for (const n of niveles) expect(n.preguntas).toHaveLength(15);
+    const ids = niveles.flatMap((n) => n.preguntas.map((p) => p.id));
+    expect(new Set(ids).size).toBe(180);
   });
 
   it('cada pregunta tiene 3 opciones distintas, una correcta válida y explicación', () => {

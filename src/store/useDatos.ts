@@ -79,7 +79,15 @@ export const useDatos = create<Store>()(
     }),
     {
       name: CLAVE_ALMACEN,
-      version: 1,
+      // v2: los niveles pasan de 30 a 15 preguntas y cambian sus identificadores.
+      version: 2,
+      migrate: (guardado, version) => {
+        const datos = guardado as Partial<Datos>;
+        // Los niveles completados de v1 ya no corresponden a los nuevos niveles.
+        // Se conservan respuestas, errores, simulacros y ajustes.
+        if (version < 2) return { ...datos, completados: {} } as Store;
+        return datos as Store;
+      },
       storage: createJSONStorage(() => AsyncStorage),
       partialize: ({ completados, respuestas, errores, simulacros, ajustes }) => ({
         completados,

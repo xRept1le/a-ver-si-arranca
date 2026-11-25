@@ -6,15 +6,31 @@ import senales2 from './preguntas/senales-2.json';
 import velocidad1 from './preguntas/velocidad-1.json';
 import velocidad2 from './preguntas/velocidad-2.json';
 
-const p = (json: unknown) => json as Pregunta[];
+/** Preguntas por nivel del camino de Inicio. */
+export const PREGUNTAS_POR_NIVEL = 15;
 
-const nivel = (temaId: string, numero: number, titulo: string, preguntas: Pregunta[]): Nivel => ({
-  id: `${temaId}-${numero}`,
-  temaId,
-  numero,
-  titulo,
-  preguntas,
-});
+/**
+ * Convierte bloques temáticos de preguntas en niveles consecutivos de
+ * PREGUNTAS_POR_NIVEL preguntas. Un bloque de 30 da dos niveles («parte 1» y «parte 2»).
+ */
+function niveles(temaId: string, bloques: { titulo: string; preguntas: unknown }[]): Nivel[] {
+  const resultado: Nivel[] = [];
+  for (const bloque of bloques) {
+    const preguntas = bloque.preguntas as Pregunta[];
+    const partes = Math.ceil(preguntas.length / PREGUNTAS_POR_NIVEL);
+    for (let i = 0; i < partes; i++) {
+      const numero = resultado.length + 1;
+      resultado.push({
+        id: `${temaId}-${numero}`,
+        temaId,
+        numero,
+        titulo: partes > 1 ? `${bloque.titulo} · parte ${i + 1}` : bloque.titulo,
+        preguntas: preguntas.slice(i * PREGUNTAS_POR_NIVEL, (i + 1) * PREGUNTAS_POR_NIVEL),
+      });
+    }
+  }
+  return resultado;
+}
 
 /** Temas de demostración, en el orden del camino de Inicio. */
 export const temas: Tema[] = [
@@ -22,27 +38,27 @@ export const temas: Tema[] = [
     id: 'senales',
     titulo: 'Señales',
     capituloId: 'senales',
-    niveles: [
-      nivel('senales', 1, 'Peligro y prohibición', p(senales1)),
-      nivel('senales', 2, 'Obligación, indicación y marcas', p(senales2)),
-    ],
+    niveles: niveles('senales', [
+      { titulo: 'Peligro y prohibición', preguntas: senales1 },
+      { titulo: 'Obligación, indicación y marcas', preguntas: senales2 },
+    ]),
   },
   {
     id: 'prioridad',
     titulo: 'Prioridad de paso',
     capituloId: 'prioridad',
-    niveles: [
-      nivel('prioridad', 1, 'Intersecciones', p(prioridad1)),
-      nivel('prioridad', 2, 'Glorietas y casos especiales', p(prioridad2)),
-    ],
+    niveles: niveles('prioridad', [
+      { titulo: 'Intersecciones', preguntas: prioridad1 },
+      { titulo: 'Glorietas y casos especiales', preguntas: prioridad2 },
+    ]),
   },
   {
     id: 'velocidad',
     titulo: 'Velocidad',
     capituloId: 'velocidad',
-    niveles: [
-      nivel('velocidad', 1, 'Límites de velocidad', p(velocidad1)),
-      nivel('velocidad', 2, 'Adaptar la velocidad', p(velocidad2)),
-    ],
+    niveles: niveles('velocidad', [
+      { titulo: 'Límites de velocidad', preguntas: velocidad1 },
+      { titulo: 'Adaptar la velocidad', preguntas: velocidad2 },
+    ]),
   },
 ];

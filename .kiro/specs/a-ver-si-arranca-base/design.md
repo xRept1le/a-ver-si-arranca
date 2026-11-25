@@ -70,11 +70,12 @@ simulacros: { id, fecha, aciertos, total, porTiempo: boolean, respuestas }[]
 ajustes: { recordatorios: boolean, hora: 'HH:MM' }
 ```
 
-Las cifras de Progreso se derivan de `respuestas`, `nivelesCompletados` y `simulacros`; no se guardan totales aparte. La duración estimada de una lección = nº de preguntas × 40 s, redondeada a minutos (30 preguntas ≈ 20 min).
+Las cifras de Progreso se derivan de `respuestas`, `nivelesCompletados` y `simulacros`; no se guardan totales aparte. La duración estimada de una lección = nº de preguntas × 40 s, redondeada a minutos (15 preguntas ≈ 10 min).
 
 ## Contenido de demostración
 
-- 3 temas × 2 niveles = 6 niveles; 30 preguntas por nivel (180 en total), en JSON dentro de `src/content/demo/`. Un nivel se completa con 3 fallos como máximo.
+- 3 temas × 4 niveles = 12 niveles; 15 preguntas por nivel (180 en total), en JSON dentro de `src/content/demo/`. Cada bloque temático de 30 preguntas se divide en «parte 1» y «parte 2». Un nivel se completa con 3 fallos como máximo.
+- El estado guardado pasa a la versión 2: al migrar se reinician los niveles completados (sus identificadores cambian) y se conservan respuestas, errores, simulacros y ajustes.
 - Capítulo legible: «Prioridad de paso», enlazado al tema del mismo nombre. Contiene la escena cenital (cruce sin señalizar).
 - Simulacro demo: 6 preguntas, 3 minutos. Corte de aprobado demo: como máximo 1 fallo. No se presenta como el formato oficial.
 - Sin enlaces a fuentes oficiales salvo que la URL concreta se haya comprobado.
@@ -82,5 +83,6 @@ Las cifras de Progreso se derivan de `respuestas`, `nivelesCompletados` y `simul
 ## Identidad visual
 
 - Fondo `#0B0B0C`, superficies `#16171A` / `#202227`, texto `#F2F2F3` / `#A0A3AB`, acento azul `#3B82F6`.
-- Acierto y fallo usan grises de contraste + iconos ✓ / ✕ y texto; no se añaden verdes ni rojos (único acento: azul).
+- Corrección en lecciones y repasos: verde `#22C55E` para la respuesta correcta y naranja `#F97316` para la elegida incorrecta, con iconos ✓ / ✕ y texto. En resúmenes y listas, acierto y fallo siguen en grises con icono.
+- Recuadro de imagen 16:9 sobre las opciones; la escena cenital se dibuja dentro sin deformarse.
 - Camino de niveles: nodos circulares en línea vertical con ligero zigzag, conectados por un trazo gris que se vuelve azul hasta el nivel actual. Motivo propio: los nodos imitan el marcador de una señal circular y el tema se presenta como un «tramo» de carretera.
