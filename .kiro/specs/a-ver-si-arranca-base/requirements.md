@@ -3,7 +3,7 @@
 Estado: aprobada el 25-11-2026 con estas decisiones:
 - Un nivel tiene 15 preguntas (cambio del 25-11-2026; antes 30) y se completa con 3 fallos como máximo.
 - Al corregir una pregunta de lección o repaso: la opción elegida se marca en verde si es correcta y en naranja si es incorrecta; la correcta se marca en verde. Siempre con icono y texto. Fuera de la corrección, el azul es el único acento.
-- Demo: 3 temas × 4 niveles; simulacro de 30 preguntas y 30 minutos (máximo 3 fallos).
+- Demo: nivel 1 de «El conductor y el permiso B» + 3 temas × 4 niveles (13 niveles); simulacro de 30 preguntas y 30 minutos (máximo 3 fallos).
 - Comprobación con `tsc`, Jest y recorrido web con Playwright; prueba en Android real a cargo del usuario.
 Plataforma: Android (Expo + React Native + TypeScript).
 Todo el contenido de preguntas y temario de esta fase es **de demostración, pendiente de revisión**.

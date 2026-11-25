@@ -1,4 +1,4 @@
-import { niveles, REGLAS, temas, todasLasPreguntas } from '@/content';
+import { camino, capitulos, esPrevisto, niveles, REGLAS, temas, todasLasPreguntas } from '@/content';
 import { aplicarAErrores, listarErrores } from '../errores';
 import { estadosNiveles, nivelActual, nivelQueFalta, nivelSuperado } from '../niveles';
 import { porcentaje, resumenProgreso } from '../progreso';
@@ -6,12 +6,28 @@ import { corregirSimulacro, formatoTiempo, generarSimulacro } from '../simulacro
 import type { RegistroError, Respuesta } from '../types';
 
 describe('contenido de demostración', () => {
-  it('tiene 3 temas, 12 niveles y 15 preguntas por nivel sin repetir preguntas', () => {
-    expect(temas).toHaveLength(3);
-    expect(niveles).toHaveLength(12);
+  it('tiene 4 temas, 13 niveles y 15 preguntas por nivel sin repetir preguntas', () => {
+    expect(temas).toHaveLength(4);
+    expect(niveles).toHaveLength(13);
     for (const n of niveles) expect(n.preguntas).toHaveLength(15);
     const ids = niveles.flatMap((n) => n.preguntas.map((p) => p.id));
-    expect(new Set(ids).size).toBe(180);
+    expect(new Set(ids).size).toBe(195);
+  });
+
+  it('el camino empieza por el nivel 1 de «El conductor y el permiso B» y sigue el orden del temario', () => {
+    expect(niveles[0].id).toBe('conductor-1');
+    expect(niveles[1].id).toBe('senales-1');
+    expect(camino).toHaveLength(15);
+    const primero = camino[0];
+    expect(esPrevisto(primero) ? [] : primero.previstos?.map((n) => n.id)).toEqual(['conductor-2', 'conductor-3', 'conductor-4']);
+  });
+
+  it('las preguntas enlazan con apartados que existen en su capítulo', () => {
+    for (const tema of temas) {
+      const capitulo = capitulos.find((c) => c.id === tema.capituloId)!;
+      const apartados = new Set(capitulo.apartados.map((a) => a.id));
+      for (const p of tema.niveles.flatMap((n) => n.preguntas)) expect(apartados.has(p.apartado)).toBe(true);
+    }
   });
 
   it('cada pregunta tiene 3 opciones distintas, una correcta válida y explicación', () => {
@@ -152,8 +168,8 @@ describe('simulacro', () => {
   it('elige el número pedido de preguntas por tema sin repetir', () => {
     const bancos = temas.map((t) => t.niveles.flatMap((n) => n.preguntas));
     const s = generarSimulacro(bancos, 2);
-    expect(s).toHaveLength(6);
-    expect(new Set(s.map((p) => p.id)).size).toBe(6);
+    expect(s).toHaveLength(8);
+    expect(new Set(s.map((p) => p.id)).size).toBe(8);
   });
 
   it('formatea el tiempo restante', () => {

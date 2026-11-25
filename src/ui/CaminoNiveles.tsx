@@ -83,7 +83,7 @@ const TEXTO_ESTADO: Record<EstadoCamino, string> = {
 
 type Elemento =
   | { tipo: 'cartel'; y: number; tramo: TramoCamino; t: number }
-  | { tipo: 'nivel'; y: number; tramo: TramoCamino; t: number; nivel: Nivel | NivelPrevisto; k: number }
+  | { tipo: 'nivel'; y: number; tramo: TramoCamino; t: number; nivel: Nivel | NivelPrevisto; previsto: boolean; k: number }
   | { tipo: 'entrada'; y: number; t: number }
   | { tipo: 'salida'; y: number; t: number }
   | { tipo: 'meta'; y: number };
@@ -108,8 +108,12 @@ function trazar() {
     }
     elementos.push({ tipo: 'cartel', y, tramo, t });
     y += ALTO.cartel;
-    for (const nivel of tramo.niveles) {
-      elementos.push({ tipo: 'nivel', y, tramo, t, nivel, k });
+    // Primero los niveles con preguntas y después los que aún están en preparación.
+    const lista: { nivel: Nivel | NivelPrevisto; previsto: boolean }[] = esPrevisto(tramo)
+      ? tramo.niveles.map((nivel) => ({ nivel, previsto: true }))
+      : [...tramo.niveles.map((nivel) => ({ nivel, previsto: false })), ...(tramo.previstos ?? []).map((nivel) => ({ nivel, previsto: true }))];
+    for (const { nivel, previsto } of lista) {
+      elementos.push({ tipo: 'nivel', y, tramo, t, nivel, previsto, k });
       y += ALTO.nivel;
       k++;
     }
@@ -435,10 +439,10 @@ export function CaminoNiveles() {
     return Math.max(26, posicionEnY(rutaCoche, y) - PARADA_COCHE);
   }, [hayCompletados, actual, elementos, puntos, rutaCoche, total]);
 
-  const estadoDe = (e: ElementoNivel): EstadoCamino => (esPrevisto(e.tramo) ? 'previsto' : estados[e.nivel.id]);
+  const estadoDe = (e: ElementoNivel): EstadoCamino => (e.previsto ? 'previsto' : estados[e.nivel.id]);
 
   const pulsar = (e: ElementoNivel) => {
-    if (esPrevisto(e.tramo)) {
+    if (e.previsto) {
       setAviso({ tipo: 'previsto', tramo: e.tramo });
       return;
     }
@@ -528,10 +532,10 @@ export function CaminoNiveles() {
 
       <Dialogo
         visible={!!aviso}
-        titulo={aviso?.tipo === 'previsto' ? 'Tema en preparación' : 'Nivel bloqueado'}
+        titulo={aviso?.tipo === 'previsto' ? 'Nivel en preparación' : 'Nivel bloqueado'}
         mensaje={
           aviso?.tipo === 'previsto'
-            ? `Las preguntas de «${aviso.tramo.titulo}» todavía no están disponibles.${actual ? ` Mientras tanto, sigue con «${tituloNivel(actual)}».` : ''}`
+            ? `Este nivel de «${aviso.tramo.titulo}» todavía no tiene preguntas.${actual ? ` Mientras tanto, sigue con «${tituloNivel(actual)}».` : ''}`
             : aviso?.falta
               ? `Para desbloquear «${tituloNivel(aviso.nivel)}», completa antes «${tituloNivel(aviso.falta)}» con 3 fallos como máximo.`
               : undefined

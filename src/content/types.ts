@@ -26,6 +26,8 @@ export interface Tema {
   titulo: string;
   capituloId: string;
   niveles: Nivel[];
+  /** Niveles del camino que siguen a los jugables y aún no tienen preguntas. */
+  previstos?: NivelPrevisto[];
 }
 
 /** Nivel del camino que todavía no tiene preguntas. */

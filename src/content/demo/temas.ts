@@ -1,5 +1,6 @@
 import type { Nivel, Pregunta, Tema, TemaPrevisto, TramoCamino } from '../types';
 import { capitulos } from './capitulos';
+import conductor1 from './preguntas/conductor-1.json';
 import prioridad1 from './preguntas/prioridad-1.json';
 import prioridad2 from './preguntas/prioridad-2.json';
 import senales1 from './preguntas/senales-1.json';
@@ -33,8 +34,14 @@ function niveles(temaId: string, bloques: { titulo: string; preguntas: unknown }
   return resultado;
 }
 
-/** Temas de demostración, en el orden del camino de Inicio. */
+/** Temas con preguntas, en el orden del temario (y del camino de Inicio). */
 export const temas: Tema[] = [
+  {
+    id: 'conductor',
+    titulo: 'El conductor y el permiso B',
+    capituloId: 'conductor',
+    niveles: niveles('conductor', [{ titulo: 'El permiso B', preguntas: conductor1 }]),
+  },
   {
     id: 'senales',
     titulo: 'Señales',
@@ -64,8 +71,11 @@ export const temas: Tema[] = [
   },
 ];
 
-/** Niveles previstos por tema sin preguntas, como los temas actuales (2 bloques × 2 partes). */
+/** Niveles de cada tema en el camino (2 bloques × 2 partes); los que falten aparecen como previstos. */
 const NIVELES_PREVISTOS = 4;
+
+const nivelesPrevistos = (id: string, desde: number) =>
+  Array.from({ length: Math.max(0, NIVELES_PREVISTOS - desde) }, (_, i) => ({ id: `${id}-${desde + i + 1}`, numero: desde + i + 1 }));
 
 function previsto(id: string, titulo: string, capituloId: string): TemaPrevisto {
   return {
@@ -73,7 +83,7 @@ function previsto(id: string, titulo: string, capituloId: string): TemaPrevisto 
     id,
     titulo,
     capituloId,
-    niveles: Array.from({ length: NIVELES_PREVISTOS }, (_, i) => ({ id: `${id}-${i + 1}`, numero: i + 1 })),
+    niveles: nivelesPrevistos(id, 0),
   };
 }
 
@@ -81,6 +91,9 @@ function previsto(id: string, titulo: string, capituloId: string): TemaPrevisto 
  * Tramos del camino de Inicio: un tramo por capítulo del temario, en su orden.
  * Los capítulos sin preguntas figuran como temas previstos («Próximamente»).
  */
-export const camino: TramoCamino[] = capitulos.map(
-  (c) => temas.find((t) => t.capituloId === c.id) ?? previsto(c.id, c.titulo, c.id),
-);
+export const camino: TramoCamino[] = capitulos.map((c) => {
+  const tema = temas.find((t) => t.capituloId === c.id);
+  if (!tema) return previsto(c.id, c.titulo, c.id);
+  const faltan = nivelesPrevistos(tema.id, tema.niveles.length);
+  return faltan.length ? { ...tema, previstos: faltan } : tema;
+});

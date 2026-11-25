@@ -75,7 +75,8 @@ Las cifras de Progreso se derivan de `respuestas`, `nivelesCompletados` y `simul
 ## Contenido de demostración
 
 - Capítulos sin preguntas (`camino` en `src/content/demo/temas.ts`): figuran en el camino con 4 niveles previstos cada uno y quedan fuera del desbloqueo, del progreso y del simulacro.
-- 3 temas × 4 niveles = 12 niveles; 15 preguntas por nivel (180 en total), en JSON dentro de `src/content/demo/`. Cada bloque temático de 30 preguntas se divide en «parte 1» y «parte 2». Un nivel se completa con 3 fallos como máximo.
+- «El conductor y el permiso B»: nivel 1 («El permiso B», 15 preguntas en `preguntas/conductor-1.json`) sobre qué autoriza el permiso B, requisitos, vigencia, puntos y conductor novel. Es el primer nivel del camino; sus niveles 2 a 4 figuran como previstos. El capítulo 1 tiene ya sus apartados (sin texto) para «Ver en el temario».
+- Señales, Prioridad y Velocidad: 3 temas × 4 niveles = 12 niveles; 15 preguntas por nivel (180 en total), en JSON dentro de `src/content/demo/`. Cada bloque temático de 30 preguntas se divide en «parte 1» y «parte 2». Un nivel se completa con 3 fallos como máximo.
 - El estado guardado pasa a la versión 2: al migrar se reinician los niveles completados (sus identificadores cambian) y se conservan respuestas, errores, simulacros y ajustes.
 - Capítulo legible: «Prioridad de paso», enlazado al tema del mismo nombre. Contiene la escena cenital (cruce sin señalizar).
 - Simulacro demo: 30 preguntas, 30 minutos. Apto con 3 fallos como máximo. Las casillas de las preguntas van en una fila desplazable que sigue a la pregunta actual. No se presenta como el formato oficial.

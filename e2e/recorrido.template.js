@@ -78,15 +78,15 @@ async (pagina, log) => {
   };
 
   // Estado inicial
-  ok((await estado('senales-1')) === 'Empezar', 'Inicio: primer nivel disponible');
-  ok((await estado('senales-2')) === 'Bloqueado', 'Inicio: segundo nivel bloqueado');
+  ok((await estado('conductor-1')) === 'Empezar', 'Inicio: el camino empieza por el nivel 1 del tema 1');
+  ok((await estado('senales-1')) === 'Bloqueado', 'Inicio: el siguiente nivel está bloqueado');
   ok(
     (await etiqueta('tramo-conductor')).startsWith('Tramo 1') &&
       (await etiqueta('tramo-via')).startsWith('Tramo 2') &&
       (await etiqueta('tramo-senales')).startsWith('Tramo 3'),
     'Camino: los temas 1 y 2 van antes de Señales',
   );
-  ok((await estado('conductor-1')) === 'Próximamente', 'Camino: los niveles de los temas 1 y 2 están en preparación');
+  ok((await estado('conductor-2')) === 'Próximamente' && (await estado('via-1')) === 'Próximamente', 'Camino: los niveles sin preguntas están en preparación');
   ok(
     (await etiqueta('tramo-maniobras')).startsWith('Tramo 6') && (await etiqueta('tramo-eficiente')).startsWith('Tramo 15'),
     'Camino: incluye los 15 capítulos del temario',
@@ -94,7 +94,7 @@ async (pagina, log) => {
   ok((await centroY('coche')) < (await centroY('nivel-conductor-1')), 'Coche: sin niveles completados, espera al principio de la carretera');
   await pulsar('nivel-via-2');
   await esperar('dialogo');
-  ok((await vis('dialogo').innerText()).includes('Señales · Nivel 1'), 'Camino: un nivel en preparación remite al nivel disponible');
+  ok((await vis('dialogo').innerText()).includes('El conductor y el permiso B · Nivel 1'), 'Camino: un nivel en preparación remite al nivel disponible');
   await pulsar('dialogo-cancelar');
   await pulsar('tab-progreso');
   await esperar('progreso-vacio');
@@ -102,7 +102,7 @@ async (pagina, log) => {
   await pulsar('tab-inicio');
   await pulsar('nivel-senales-2');
   await esperar('dialogo');
-  ok((await vis('dialogo').innerText()).includes('Señales · Nivel 1'), 'Nivel bloqueado indica qué nivel falta');
+  ok((await vis('dialogo').innerText()).includes('El conductor y el permiso B · Nivel 1'), 'Nivel bloqueado indica qué nivel falta');
   await pulsar('dialogo-cancelar');
 
   // Lección desde Inicio
@@ -110,6 +110,8 @@ async (pagina, log) => {
   await esperar('sesion');
   ok(!(await visible('tab-inicio')), 'Lección: barra de pestañas oculta');
   ok(await vis('comprobar').isDisabled(), 'Lección: «Comprobar» desactivado sin opción elegida');
+  ok((await preguntaId()).startsWith('con1-'), 'Lección: el nivel 1 del tema 1 pregunta sobre el permiso B');
+  await page.screenshot({ path: FOTOS + 'conductor-nivel1.png' });
   const primera = await responder(true);
   ok((await vis('explicacion').innerText()).includes('Respuesta correcta'), 'Fallo: muestra resultado, respuesta correcta y explicación');
   ok((await vis('estado-opcion-' + R[primera]).innerText()).toLowerCase().includes('respuesta correcta'), 'Fallo: la opción correcta queda señalada');
@@ -146,10 +148,10 @@ async (pagina, log) => {
   ok(await visible('desbloqueado'), 'Resumen: muestra el nivel desbloqueado');
   await pulsar('volver-inicio');
   await esperar('tarjeta-continuar');
-  ok((await estado('senales-1')).startsWith('Completado'), 'Inicio: nivel 1 completado');
-  ok((await estado('senales-2')) === 'Empezar', 'Inicio: nivel 2 desbloqueado');
-  ok(await cocheAntesDe('senales-2'), 'Coche: tras completar un nivel avanza hasta el siguiente');
-  await vis('nivel-senales-2').scrollIntoViewIfNeeded();
+  ok((await estado('conductor-1')).startsWith('Completado'), 'Inicio: nivel 1 completado');
+  ok((await estado('senales-1')) === 'Empezar', 'Inicio: el siguiente nivel con preguntas queda desbloqueado');
+  ok(await cocheAntesDe('senales-1'), 'Coche: tras completar un nivel avanza hasta el siguiente');
+  await vis('nivel-senales-1').scrollIntoViewIfNeeded();
   await page.screenshot({ path: FOTOS + 'coche.png' });
 
   // Repaso: acertar → Corregidas
@@ -173,7 +175,7 @@ async (pagina, log) => {
   // Volver a fallarla en otra sesión → Pendientes
   await atras();
   await esperar('tarjeta-continuar');
-  await pulsar('nivel-senales-1');
+  await pulsar('nivel-conductor-1');
   await esperar('sesion');
   const refallo = await responder(true);
   ok(refallo === falladasN1[0], 'Se repite el nivel completado y se vuelve a fallar la misma pregunta');
@@ -181,7 +183,7 @@ async (pagina, log) => {
   await esperar('dialogo');
   await pulsar('dialogo-confirmar');
   await esperar('tarjeta-continuar');
-  ok((await estado('senales-1')).startsWith('Completado'), 'Salir con confirmación; repetir no bloquea el nivel');
+  ok((await estado('conductor-1')).startsWith('Completado'), 'Salir con confirmación; repetir no bloquea el nivel');
   await pulsar('abrir-errores');
   await esperar('lista-pendientes');
   ok(await visible('error-' + refallo), 'Corregida que se vuelve a fallar: regresa a Pendientes');
@@ -197,7 +199,7 @@ async (pagina, log) => {
   await esperar('pantalla-temario');
   await pulsar('capitulo-prioridad');
   await esperar('practicar-tema');
-  ok((await vis('practicar-detalle').innerText()).includes('Señales · Nivel 2'), 'Temario: tema bloqueado indica el nivel que falta');
+  ok((await vis('practicar-detalle').innerText()).includes('Señales · Nivel 1'), 'Temario: tema bloqueado indica el nivel que falta');
   ok((await vis('apartado-norma-general').innerText()).length > 200, 'Temario: el capítulo de demostración se puede leer');
   await atras();
   await pulsar('capitulo-senales');
@@ -230,7 +232,7 @@ async (pagina, log) => {
   await esperar('practicar-tema');
   await pulsar('practicar-tema');
   await esperar('sesion');
-  ok((await preguntaId()) === 'sen1-16', 'Temario: «Practicar este tema» abre la lección disponible');
+  ok((await preguntaId()) === 'sen1-01', 'Temario: «Practicar este tema» abre la lección disponible');
 
   // Nivel no superado
   await sesion([0, 1, 2, 3]);
@@ -238,11 +240,11 @@ async (pagina, log) => {
   ok((await id('confeti').count()) === 0, 'Nivel no superado: sin confeti');
   await pulsar('volver-inicio');
   await esperar('tarjeta-continuar');
-  ok((await estado('senales-2')) === 'Empezar', 'Nivel no superado: sigue disponible');
-  ok((await estado('prioridad-1')) === 'Bloqueado', 'Nivel no superado: no desbloquea el siguiente');
+  ok((await estado('senales-1')) === 'Empezar', 'Nivel no superado: sigue disponible');
+  ok((await estado('senales-2')) === 'Bloqueado', 'Nivel no superado: no desbloquea el siguiente');
   await page.goto(ORIGEN + '/leccion/prioridad-1');
   await esperar('leccion-bloqueada', 20000);
-  ok((await vis('leccion-bloqueada').innerText()).includes('Señales · Nivel 2'), 'Lección bloqueada abierta por URL: indica el nivel que falta');
+  ok((await vis('leccion-bloqueada').innerText()).includes('Señales · Nivel 1'), 'Lección bloqueada abierta por URL: indica el nivel que falta');
   await page.goto(ORIGEN + '/');
   await esperar('tarjeta-continuar', 20000);
 
@@ -288,7 +290,7 @@ async (pagina, log) => {
   ok((await id('tab-inicio').count()) === 1, 'Ver en Progreso vuelve a las pestañas existentes, sin duplicarlas');
   ok(await visible('historial-1'), 'Progreso: historial con los dos simulacros');
   ok((await vis('historial-0').innerText()).includes('Tiempo agotado'), 'Progreso: el último simulacro figura como tiempo agotado');
-  ok((await vis('lecciones-completadas').innerText()) === '1 de 12', 'Progreso: 1 lección completada');
+  ok((await vis('lecciones-completadas').innerText()) === '1 de 13', 'Progreso: 1 lección completada de 13');
   const aciertos = Number((await vis('aciertos-senales').innerText()).split(' ')[0]);
   const fallos = Number((await vis('fallos-senales').innerText()).split(' ')[0]);
   ok(aciertos > 0 && fallos > 0, `Progreso: Señales con ${aciertos} aciertos y ${fallos} fallos`);

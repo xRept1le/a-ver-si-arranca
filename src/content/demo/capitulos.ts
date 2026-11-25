@@ -3,9 +3,23 @@ import type { Capitulo } from '../types';
 /**
  * Índice provisional del temario del permiso B.
  * Contenido de demostración pendiente de revisión: solo «Prioridad de paso» tiene texto.
+ * Los apartados vacíos ya sirven de destino para «Ver en el temario».
  */
 export const capitulos: Capitulo[] = [
-  { id: 'conductor', numero: 1, titulo: 'El conductor y el permiso B', legible: false, apartados: [] },
+  {
+    id: 'conductor',
+    numero: 1,
+    titulo: 'El conductor y el permiso B',
+    legible: false,
+    temaId: 'conductor',
+    apartados: [
+      { id: 'permisos', titulo: 'Clases de permiso y qué autoriza el permiso B', parrafos: [] },
+      { id: 'requisitos', titulo: 'Requisitos para obtener el permiso', parrafos: [] },
+      { id: 'vigencia', titulo: 'Vigencia y renovación', parrafos: [] },
+      { id: 'puntos', titulo: 'El permiso por puntos', parrafos: [] },
+      { id: 'novel', titulo: 'El conductor novel', parrafos: [] },
+    ],
+  },
   { id: 'via', numero: 2, titulo: 'La vía y sus usuarios', legible: false, apartados: [] },
   {
     id: 'senales',
