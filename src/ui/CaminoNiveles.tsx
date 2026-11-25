@@ -1,34 +1,72 @@
-import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { router, useIsFocused } from 'expo-router';
+import { memo, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Defs, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import { camino, esPrevisto, niveles, tituloNivel, type Nivel, type NivelPrevisto, type TramoCamino } from '@/content';
 import { estadosNiveles, nivelActual, nivelQueFalta, type EstadoNivel } from '@/domain/niveles';
 import { useDatos } from '@/store/useDatos';
+import { Coche, muestrearRecorrido, posicionEnY } from './Coche';
 import { Dialogo, Icono } from './componentes';
-import { azar, CartelOrientacion, componerPaisaje, EntradaPoblado, Meta, PAISAJE, PasoPeatones, PiezaPaisaje, Tunel } from './Paisaje';
+import {
+  azar,
+  BIOMAS,
+  CartelOrientacion,
+  componerPaisaje,
+  EntradaPoblado,
+  FinPoblado,
+  Mar,
+  Meta,
+  PAISAJE,
+  PasoPeatones,
+  PiezaPaisaje,
+  Rio,
+  Tunel,
+  type BiomaId,
+  type Zona,
+  type ZonaBioma,
+} from './Paisaje';
 import { colores, radio } from './tema';
 
 const NODO = 58;
 const NODO_ACTUAL = 70;
 /** Altura de cada elemento del camino. */
-const ALTO = { cartel: 96, nivel: 118, entrada: 110, meta: 90 } as const;
+const ALTO = { cartel: 96, nivel: 118, entrada: 110, salida: 96, meta: 90 } as const;
 /** Altura de la ladera con el túnel del principio y altura de su boca. */
 const TUNEL = { alto: 128, boca: 104 } as const;
 /** Medio ancho de la calzada y de lo que ocupa con arcén o acera. */
 const CALZADA = { campo: 54, ciudad: 64 } as const;
 const OCUPA = { campo: CALZADA.campo / 2 + 7, ciudad: CALZADA.ciudad / 2 + 15 } as const;
-/** El penúltimo tramo atraviesa un pueblo y el último, la ciudad. */
-const PRIMER_TRAMO_PUEBLO = Math.max(0, camino.length - 2);
-const PRIMER_TRAMO_CIUDAD = Math.max(0, camino.length - 1);
-/** Nombre del pueblo en la señal de entrada a poblado. */
+/** Un bioma por tramo, en el orden del camino; si hubiera más tramos, se repiten. */
+const BIOMA_DE_TRAMO: BiomaId[] = [
+  'prado',
+  'bosque',
+  'cultivo',
+  'pueblo',
+  'ciudad',
+  'industrial',
+  'costa',
+  'olivar',
+  'montana',
+  'vinedo',
+  'rio',
+  'desierto',
+  'nieve',
+  'naranjal',
+  'renovables',
+];
+const biomaDe = (t: number) => BIOMA_DE_TRAMO[t % BIOMA_DE_TRAMO.length];
+/** Nombres en las señales de población. */
 const NOMBRE_PUEBLO = 'VILLARRANCA';
-/** Altura de los fundidos entre zonas. */
-const FUNDIDO = 220;
-const CARACTER = ['prado', 'bosque', 'cultivo'] as const;
-const CARTEL = { ancho: 150, alto: 52 } as const;
+const NOMBRE_CIUDAD = 'CIUDAD';
+const CARTEL = { ancho: 150, alto: 60 } as const;
 const ENSANCHE = 30;
+/** Altura de los fundidos de fondo entre biomas. */
+const FUNDIDO = 240;
+/** Altura de cada trozo de SVG: un único lienzo de miles de px es demasiado grande en Android. */
+const TROZO = 720;
+/** El coche para un poco antes del nivel siguiente. */
+const PARADA_COCHE = 46;
 
 /** Trapecio centrado en `x` que pasa de ancho `w0` (arriba) a `w1` (abajo). */
 const trapecio = (x: number, y: number, w0: number, w1: number) =>
@@ -46,20 +84,26 @@ const TEXTO_ESTADO: Record<EstadoCamino, string> = {
 type Elemento =
   | { tipo: 'cartel'; y: number; tramo: TramoCamino; t: number }
   | { tipo: 'nivel'; y: number; tramo: TramoCamino; t: number; nivel: Nivel | NivelPrevisto; k: number }
-  | { tipo: 'entrada'; y: number }
+  | { tipo: 'entrada'; y: number; t: number }
+  | { tipo: 'salida'; y: number; t: number }
   | { tipo: 'meta'; y: number };
 type ElementoNivel = Extract<Elemento, { tipo: 'nivel' }>;
 
 const centro = (e: Elemento) => e.y + ALTO[e.tipo] / 2;
 
-/** Coloca los elementos del camino de arriba abajo. */
+/** Coloca los elementos del camino de arriba abajo y la franja de bioma de cada tramo. */
 function trazar() {
   const elementos: Elemento[] = [];
+  const zonas: ZonaBioma[] = [];
   let y = TUNEL.alto;
   let k = 0;
   camino.forEach((tramo, t) => {
-    if (t === PRIMER_TRAMO_CIUDAD && t > 0) {
-      elementos.push({ tipo: 'entrada', y });
+    const bioma = biomaDe(t);
+    const urbano = !!BIOMAS[bioma].urbano;
+    const y0 = t === 0 ? 0 : y;
+    // Las ciudades tienen entrada y salida en tramos rectos, donde la calzada cambia de anchura.
+    if (urbano && t > 0 && !BIOMAS[biomaDe(t - 1)].urbano) {
+      elementos.push({ tipo: 'entrada', y, t });
       y += ALTO.entrada;
     }
     elementos.push({ tipo: 'cartel', y, tramo, t });
@@ -69,10 +113,16 @@ function trazar() {
       y += ALTO.nivel;
       k++;
     }
+    if (urbano && t < camino.length - 1 && !BIOMAS[biomaDe(t + 1)].urbano) {
+      elementos.push({ tipo: 'salida', y, t });
+      y += ALTO.salida;
+    }
+    zonas.push({ y0, y1: y, bioma });
   });
   elementos.push({ tipo: 'meta', y });
   y += ALTO.meta;
-  return { elementos, total: y };
+  zonas[zonas.length - 1].y1 = y;
+  return { elementos, zonas, total: y };
 }
 
 /** Curva entre dos puntos con tangentes verticales en ambos extremos. */
@@ -81,25 +131,48 @@ function curva(a: { x: number; y: number }, b: { x: number; y: number }) {
   return `C${a.x},${m} ${b.x},${m} ${b.x},${b.y}`;
 }
 
+/** Ángulo (grados) de la carretera en la mitad de la curva entre a y b. */
+const anguloMitad = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+  (Math.atan2(0.75 * (b.y - a.y), 1.5 * (b.x - a.x)) * 180) / Math.PI;
+
+/** Elemento de dibujo con la franja vertical que ocupa, para repartirlo entre trozos. */
+interface Capa {
+  y0: number;
+  y1: number;
+  nodo: ReactNode;
+}
+
+/** Un trozo del fondo: un SVG de altura TROZO que solo dibuja las capas que lo tocan. */
+const Trozo = memo(function Trozo({ y0, alto, W, capas, defs }: { y0: number; alto: number; W: number; capas: Capa[]; defs: ReactNode }) {
+  const visibles = capas.filter((c) => c.y1 >= y0 - 2 && c.y0 <= y0 + alto + 2);
+  return (
+    <Svg width={W} height={alto} viewBox={`0 ${y0} ${W} ${alto}`} style={{ position: 'absolute', left: 0, top: y0 }}>
+      <Defs>{defs}</Defs>
+      {visibles.map((c) => c.nodo)}
+    </Svg>
+  );
+});
+
 /**
- * Camino de niveles con forma de carretera. Los niveles son los protagonistas: el paisaje,
- * en tonos apagados, se reparte alrededor sin patrones fijos y el texto se limita al nivel actual.
+ * Camino de niveles con forma de carretera: sale de un túnel y cruza un bioma por tramo.
+ * Los niveles son los protagonistas: el paisaje, en tonos apagados, se reparte alrededor sin
+ * patrones fijos, y el texto se limita a los carteles de tramo y al nivel actual. Un coche
+ * azul claro avanza por la carretera hasta el nivel que toca.
  */
 export function CaminoNiveles() {
   const { width: anchoVentana } = useWindowDimensions();
+  const enPantalla = useIsFocused();
   const [ancho, setAncho] = useState(0);
   const W = Math.round(ancho || anchoVentana);
   const completados = useDatos((s) => s.completados);
   const estados = estadosNiveles(niveles, completados);
   const actual = nivelActual(niveles, completados);
+  const hayCompletados = niveles.some((n) => completados[n.id]);
   const [aviso, setAviso] = useState<{ tipo: 'bloqueado'; nivel: Nivel; falta?: Nivel } | { tipo: 'previsto'; tramo: TramoCamino } | null>(null);
 
-  const { elementos, total } = useMemo(trazar, []);
-  const yCiudad = elementos.find((e) => e.tipo === 'entrada')?.y ?? total;
-  const cartelPueblo = elementos.find((e) => e.tipo === 'cartel' && e.t === PRIMER_TRAMO_PUEBLO);
-  const yPueblo = cartelPueblo && PRIMER_TRAMO_PUEBLO > 0 ? cartelPueblo.y - 30 : yCiudad;
+  const { elementos, zonas, total } = useMemo(trazar, []);
 
-  // Geometría y paisaje: solo dependen del ancho.
+  // Geometría, paisaje y capas estáticas: solo dependen del ancho.
   const escena = useMemo(() => {
     // Zigzag con amplitud algo irregular para que no parezca dibujado con plantilla.
     const xDe = (e: Elemento) => {
@@ -108,8 +181,11 @@ export function CaminoNiveles() {
       return W * (0.5 + (e.k % 2 === 0 ? -amplitud : amplitud));
     };
     const puntos = [{ x: W / 2, y: TUNEL.boca }, ...elementos.map((e) => ({ x: xDe(e), y: centro(e) })), { x: W / 2, y: total }];
+    const indiceDe = (e: Elemento) => elementos.indexOf(e) + 1;
+    const zonaDe = (y: number) => zonas.find((z) => y >= z.y0 && y < z.y1) ?? zonas[zonas.length - 1];
+    const urbano = (y: number) => !!BIOMAS[zonaDe(y).bioma].urbano;
 
-    // Carteles junto a la calzada, alternando lado.
+    // Carteles de tramo junto a la calzada, alternando lado.
     const carteles = elementos.flatMap((e) => {
       if (e.tipo !== 'cartel') return [];
       const izq = e.t % 2 === 0;
@@ -117,71 +193,247 @@ export function CaminoNiveles() {
       return [{ e, x, y: centro(e) - CARTEL.alto / 2 - 10 }];
     });
 
-    // Señal de entrada a poblado, en el lado contrario al cartel del tramo.
-    const entradaPueblo =
-      cartelPueblo && cartelPueblo.tipo === 'cartel' && yPueblo < yCiudad
-        ? {
-            x: cartelPueblo.t % 2 === 0 ? W / 2 + OCUPA.campo + 58 : W / 2 - OCUPA.campo - 58,
-            y: centro(cartelPueblo) + 30,
-          }
-        : undefined;
+    // Señales de población junto a la calzada, en el lado contrario al cartel del tramo.
+    const senales: { tipo: 'entrada' | 'fin'; nombre: string; x: number; y: number }[] = [];
+    for (const e of elementos) {
+      if (e.tipo === 'cartel' && biomaDe(e.t) === 'pueblo') {
+        senales.push({ tipo: 'entrada', nombre: NOMBRE_PUEBLO, x: e.t % 2 === 0 ? W / 2 + OCUPA.campo + 58 : W / 2 - OCUPA.campo - 58, y: centro(e) + 30 });
+      }
+      if (e.tipo === 'salida') senales.push({ tipo: 'fin', nombre: NOMBRE_CIUDAD, x: W / 2 - OCUPA.ciudad - 46, y: centro(e) + 30 });
+    }
 
-    const reservas = [
+    // Elementos de fondo propios de algunos biomas: el mar en un lateral y un río con puente.
+    const especiales: Capa[] = [];
+    const reservasAgua: Zona[] = [];
+    zonas.forEach((z) => {
+      const b = BIOMAS[z.bioma];
+      if (b.especial === 'mar') {
+        const y0 = z.y0 + ALTO.cartel + 40;
+        const y1 = z.y1 - 40;
+        const x = W - 54;
+        especiales.push({ y0, y1, nodo: <Mar key={`mar${z.y0}`} y0={y0} y1={y1} x={x} W={W} /> });
+        reservasAgua.push({ x0: x - 30, y0: y0 - 10, x1: W, y1: y1 + 10 });
+      }
+      if (b.especial === 'rio') {
+        const niv = elementos.filter((e): e is ElementoNivel => e.tipo === 'nivel' && e.y >= z.y0 && e.y < z.y1);
+        if (niv.length >= 3) {
+          const a = puntos[indiceDe(niv[1])];
+          const c = puntos[indiceDe(niv[2])];
+          const y = (a.y + c.y) / 2;
+          especiales.push({
+            y0: y - 30,
+            y1: y + 30,
+            nodo: <Rio key={`rio${z.y0}`} y={y} W={W} xPuente={(a.x + c.x) / 2} grados={anguloMitad(a, c)} anchoCalzada={CALZADA.campo} />,
+          });
+          reservasAgua.push({ x0: 0, y0: y - 34, x1: W, y1: y + 30 });
+        }
+      }
+    });
+
+    const reservas: Zona[] = [
       { x0: 0, y0: 0, x1: W, y1: TUNEL.alto },
-      ...(entradaPueblo ? [{ x0: entradaPueblo.x - 52, y0: entradaPueblo.y - 64, x1: entradaPueblo.x + 52, y1: entradaPueblo.y + 6 }] : []),
+      ...reservasAgua,
+      ...senales.map((s) => ({ x0: s.x - 52, y0: s.y - 64, x1: s.x + 52, y1: s.y + 6 })),
       // Alrededor de cada nivel, incluida la pastilla del nivel actual.
       ...elementos.flatMap((e, i) =>
         e.tipo === 'nivel' ? [{ x0: puntos[i + 1].x - 56, y0: puntos[i + 1].y - 50, x1: puntos[i + 1].x + 56, y1: puntos[i + 1].y + 70 }] : [],
       ),
       ...carteles.map((c) => ({ x0: c.x - 6, y0: c.y - 6, x1: c.x + CARTEL.ancho + 6, y1: c.y + CARTEL.alto + 34 })),
       ...elementos
-        .filter((e) => e.tipo === 'entrada' || e.tipo === 'meta')
+        .filter((e) => e.tipo === 'entrada' || e.tipo === 'salida' || e.tipo === 'meta')
         .map((e) => ({ x0: 0, y0: e.y, x1: W, y1: e.y + ALTO[e.tipo] })),
     ];
-    const tramos = elementos.flatMap((e, i) => {
-      if (e.tipo !== 'cartel') return [];
-      const siguiente = elementos.slice(i + 1).find((s) => s.tipo !== 'nivel');
-      return [{ y0: e.y, y1: siguiente?.y ?? total, caracter: e.t < PRIMER_TRAMO_PUEBLO ? CARACTER[e.t % 3] : 'cultivo' }];
-    });
-    const piezas = componerPaisaje({ ancho: W, alto: total, yPueblo, yCiudad, puntos, medio: OCUPA, reservas, tramos });
+    const piezas = componerPaisaje({ ancho: W, alto: total, puntos, medio: OCUPA, reservas, zonas });
 
-    // Trazado de la calzada, separado en campo y ciudad. Al entrar en la ciudad la calzada
-    // se ensancha de forma gradual en un tramo recto de ENSANCHE px.
-    const trazado = { campo: '', ciudad: '' };
-    let yEnsanche: number | undefined;
+    const capas: Capa[] = [];
+    // Fondo de cada bioma y fundidos entre biomas.
+    zonas.forEach((z, i) => {
+      capas.push({ y0: z.y0, y1: z.y1, nodo: <Rect key={`f${i}`} x={0} y={z.y0} width={W} height={z.y1 - z.y0} fill={BIOMAS[z.bioma].fondo} /> });
+    });
+    zonas.slice(1).forEach((z, i) => {
+      capas.push({
+        y0: z.y0 - FUNDIDO / 2,
+        y1: z.y0 + FUNDIDO / 2,
+        nodo: <Rect key={`fu${i}`} x={0} y={z.y0 - FUNDIDO / 2} width={W} height={FUNDIDO} fill={`url(#fundido${i + 1})`} />,
+      });
+    });
+    capas.push(...especiales);
+
+    // Calzada, tramo a tramo: con arcén en el campo y con aceras en la ciudad.
     for (let i = 0; i < puntos.length - 1; i++) {
       const a = puntos[i];
       const b = puntos[i + 1];
-      if (a.y < yCiudad) {
-        if (!trazado.campo) trazado.campo = `M${a.x},${a.y}`;
-        trazado.campo += curva(a, b);
-      } else if (!trazado.ciudad) {
-        yEnsanche = a.y;
-        trazado.ciudad = `M${a.x},${a.y + ENSANCHE}L${b.x},${b.y}`;
-      } else {
-        trazado.ciudad += curva(a, b);
+      const e = elementos[i - 1];
+      const ciudad = urbano(a.y) && e?.tipo !== 'salida';
+      // En la entrada y la salida, la calzada cambia de anchura en un tramo recto.
+      const d = e?.tipo === 'entrada' || e?.tipo === 'salida' ? `M${a.x},${a.y + ENSANCHE}L${b.x},${b.y}` : `M${a.x},${a.y}${curva(a, b)}`;
+      const capasCalzada = ciudad
+        ? [
+            [PAISAJE.acera, CALZADA.ciudad + 30, 1],
+            [PAISAJE.bordillo, CALZADA.ciudad + 4, 1],
+            [PAISAJE.asfaltoCiudad, CALZADA.ciudad, 1],
+          ]
+        : [
+            [PAISAJE.arcen, CALZADA.campo + 14, 1],
+            [PAISAJE.lineaBorde, CALZADA.campo + 3, 0.55],
+            [PAISAJE.asfalto, CALZADA.campo, 1],
+          ];
+      capas.push({
+        y0: a.y - 10,
+        y1: b.y + 10,
+        nodo: (
+          <G key={`c${i}`}>
+            {capasCalzada.map(([color, grosor, opacidad]) => (
+              <Path key={`${color}`} d={d} stroke={color as string} strokeOpacity={opacidad as number} strokeWidth={grosor as number} fill="none" />
+            ))}
+          </G>
+        ),
+      });
+      if (e?.tipo === 'entrada' || e?.tipo === 'salida') {
+        const [w0, w1] = e.tipo === 'entrada' ? ['campo', 'ciudad'] : ['ciudad', 'campo'];
+        const ancho = (t: string, extra: { campo: number; ciudad: number }) => (t === 'campo' ? CALZADA.campo + extra.campo : CALZADA.ciudad + extra.ciudad);
+        capas.push({
+          y0: a.y,
+          y1: a.y + ENSANCHE,
+          nodo: (
+            <G key={`tr${i}`}>
+              <Path d={trapecio(a.x, a.y, ancho(w0, { campo: 14, ciudad: 30 }), ancho(w1, { campo: 14, ciudad: 30 }))} fill={e.tipo === 'entrada' ? PAISAJE.acera : PAISAJE.arcen} />
+              <Path d={trapecio(a.x, a.y, ancho(w0, { campo: 3, ciudad: 4 }), ancho(w1, { campo: 3, ciudad: 4 }))} fill={PAISAJE.bordillo} />
+              <Path d={trapecio(a.x, a.y, ancho(w0, { campo: 0, ciudad: 0 }), ancho(w1, { campo: 0, ciudad: 0 }))} fill={PAISAJE.asfaltoCiudad} />
+            </G>
+          ),
+        });
       }
     }
 
     // Un paso de peatones por tramo de pueblo o ciudad, en mitad de su primera curva.
-    const pasos = elementos.flatMap((e, i) => {
-      if (e.tipo !== 'cartel' || e.y < yPueblo) return [];
+    elementos.forEach((e, i) => {
+      if (e.tipo !== 'cartel') return;
+      const b = BIOMAS[biomaDe(e.t)];
+      if (b.junto !== 'casaPueblo' && b.junto !== 'edificio') return;
       const a = puntos[i + 2];
-      const b = puntos[i + 3];
-      if (!a || !b) return [];
-      const grados = (Math.atan2(0.75 * (b.y - a.y), 1.5 * (b.x - a.x)) * 180) / Math.PI;
-      const ancho = (e.y >= yCiudad ? CALZADA.ciudad : CALZADA.campo) - 10;
-      return [{ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, grados, ancho }];
+      const c = puntos[i + 3];
+      if (!a || !c) return;
+      const y = (a.y + c.y) / 2;
+      capas.push({
+        y0: y - 40,
+        y1: y + 40,
+        nodo: (
+          <PasoPeatones key={`pp${i}`} x={(a.x + c.x) / 2} y={y} grados={anguloMitad(a, c)} ancho={(b.urbano ? CALZADA.ciudad : CALZADA.campo) - 10} />
+        ),
+      });
     });
 
-    return { puntos, carteles, piezas, trazado, pasos, yEnsanche, entradaPueblo };
-  }, [W, elementos, total, yPueblo, yCiudad, cartelPueblo]);
+    return { puntos, carteles, piezas, capas, senales, indiceDe };
+  }, [W, elementos, zonas, total]);
 
   const { puntos } = escena;
   const indiceActual = actual ? elementos.findIndex((e) => e.tipo === 'nivel' && e.nivel.id === actual.id) + 1 : puntos.length;
   // Lo recorrido empieza en el primer tramo con preguntas: los previstos no se han hecho.
   const inicioRecorrido = elementos.findIndex((e) => e.tipo === 'cartel' && !esPrevisto(e.tramo)) + 1;
   const recorrido = (fin: number) => fin > inicioRecorrido && fin <= indiceActual;
+
+  // Capas que cambian con el progreso: la línea central y, por encima, el paisaje y las señales.
+  const capasDinamicas = useMemo(() => {
+    const capas: Capa[] = puntos.slice(0, -1).map((p, i) => ({
+      y0: p.y,
+      y1: puntos[i + 1].y,
+      nodo: (
+        <Path
+          key={`l${i}`}
+          d={`M${p.x},${p.y}${curva(p, puntos[i + 1])}`}
+          stroke={recorrido(i + 1) ? colores.acento : PAISAJE.lineaCentral}
+          strokeOpacity={recorrido(i + 1) ? 1 : 0.45}
+          strokeWidth={recorrido(i + 1) ? 3 : 2}
+          strokeDasharray="12 12"
+          fill="none"
+        />
+      ),
+    }));
+    return capas;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [puntos, indiceActual, inicioRecorrido]);
+
+  const capasSuperiores = useMemo(() => {
+    const capas: Capa[] = escena.piezas.map((p, i) => ({ y0: p.y - 130, y1: p.y + 10, nodo: <PiezaPaisaje key={`z${i}`} p={p} /> }));
+    escena.carteles.forEach(({ e, x, y }) =>
+      capas.push({
+        y0: y,
+        y1: y + CARTEL.alto + 30,
+        nodo: (
+          <G key={`poste${e.t}`}>
+            <Rect x={x + 22} y={y + CARTEL.alto - 2} width={3} height={30} fill={PAISAJE.farola} />
+            <Rect x={x + CARTEL.ancho - 25} y={y + CARTEL.alto - 2} width={3} height={30} fill={PAISAJE.farola} />
+          </G>
+        ),
+      }),
+    );
+    escena.senales.forEach((s, i) =>
+      capas.push({
+        y0: s.y - 60,
+        y1: s.y + 2,
+        nodo:
+          s.tipo === 'entrada' ? (
+            <EntradaPoblado key={`s${i}`} x={s.x} y={s.y} nombre={s.nombre} />
+          ) : (
+            <FinPoblado key={`s${i}`} x={s.x} y={s.y} nombre={s.nombre} />
+          ),
+      }),
+    );
+    elementos.forEach((e) => {
+      if (e.tipo === 'entrada') {
+        capas.push({
+          y0: e.y,
+          y1: e.y + ALTO.entrada,
+          nodo: (
+            <CartelOrientacion
+              key={`entrada${e.t}`}
+              x={W / 2}
+              y={e.y + 6}
+              ySuelo={e.y + ALTO.entrada - 4}
+              ruta={`T-${e.t + 1}`}
+              nombre="Ciudad"
+              separacion={CALZADA.ciudad + 44}
+            />
+          ),
+        });
+      }
+      if (e.tipo === 'meta') capas.push({ y0: e.y, y1: e.y + ALTO.meta, nodo: <Meta key="meta" x={W / 2} y={centro(e)} w={CALZADA.campo} /> });
+    });
+    capas.push({ y0: 0, y1: TUNEL.alto, nodo: <Tunel key="tunel" x={W / 2} yBoca={TUNEL.boca} ancho={CALZADA.campo} W={W} /> });
+    capas.push({ y0: 0, y1: 36, nodo: <Rect key="fundido" x={0} y={0} width={W} height={36} fill="url(#fundidoSuperior)" /> });
+    return capas;
+  }, [escena, elementos, W]);
+
+  const defs = useMemo(
+    () => (
+      <>
+        <LinearGradient id="fundidoSuperior" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={colores.fondo} stopOpacity={1} />
+          <Stop offset="1" stopColor={colores.fondo} stopOpacity={0} />
+        </LinearGradient>
+        {zonas.slice(1).map((z, i) => (
+          <LinearGradient key={i} id={`fundido${i + 1}`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={BIOMAS[zonas[i].bioma].fondo} stopOpacity={1} />
+            <Stop offset="1" stopColor={BIOMAS[z.bioma].fondo} stopOpacity={1} />
+          </LinearGradient>
+        ))}
+      </>
+    ),
+    [zonas],
+  );
+
+  const capas = useMemo(() => [...escena.capas, ...capasDinamicas, ...capasSuperiores], [escena.capas, capasDinamicas, capasSuperiores]);
+  const trozos = useMemo(() => Array.from({ length: Math.ceil(total / TROZO) }, (_, i) => i * TROZO), [total]);
+
+  // Coche: arranca a la salida del túnel y, tras completar niveles, para justo antes del siguiente.
+  const rutaCoche = useMemo(() => muestrearRecorrido(puntos, 11), [puntos]);
+  const destinoCoche = useMemo(() => {
+    if (!hayCompletados) return 26;
+    const i = actual ? elementos.findIndex((e) => e.tipo === 'nivel' && e.nivel.id === actual.id) : -1;
+    const y = i >= 0 ? puntos[i + 1].y : total - ALTO.meta / 2;
+    return Math.max(26, posicionEnY(rutaCoche, y) - PARADA_COCHE);
+  }, [hayCompletados, actual, elementos, puntos, rutaCoche, total]);
 
   const estadoDe = (e: ElementoNivel): EstadoCamino => (esPrevisto(e.tramo) ? 'previsto' : estados[e.nivel.id]);
 
@@ -201,99 +453,12 @@ export function CaminoNiveles() {
   return (
     <View testID="camino" style={[styles.camino, { height: total }]} onLayout={(ev) => setAncho(ev.nativeEvent.layout.width)}>
       <View style={StyleSheet.absoluteFill} pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-        <Svg width={W} height={total}>
-          <Defs>
-            <LinearGradient id="fundido" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={colores.fondo} stopOpacity={1} />
-              <Stop offset="1" stopColor={colores.fondo} stopOpacity={0} />
-            </LinearGradient>
-            <LinearGradient id="aPueblo" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={PAISAJE.campo} stopOpacity={1} />
-              <Stop offset="1" stopColor={PAISAJE.pueblo} stopOpacity={1} />
-            </LinearGradient>
-            <LinearGradient id="aCiudad" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={PAISAJE.pueblo} stopOpacity={1} />
-              <Stop offset="1" stopColor={PAISAJE.ciudad} stopOpacity={1} />
-            </LinearGradient>
-          </Defs>
-          <Rect x={0} y={0} width={W} height={yPueblo} fill={PAISAJE.campo} />
-          <Rect x={0} y={yPueblo} width={W} height={yCiudad - yPueblo} fill={PAISAJE.pueblo} />
-          <Rect x={0} y={yCiudad} width={W} height={total - yCiudad} fill={PAISAJE.ciudad} />
-          <Rect x={0} y={yPueblo - FUNDIDO / 2} width={W} height={FUNDIDO} fill="url(#aPueblo)" />
-          <Rect x={0} y={yCiudad - FUNDIDO / 2} width={W} height={FUNDIDO} fill="url(#aCiudad)" />
-
-          {/* Calzada */}
-          {escena.trazado.campo ? (
-            <G>
-              <Path d={escena.trazado.campo} stroke={PAISAJE.arcen} strokeWidth={CALZADA.campo + 14} fill="none" />
-              <Path d={escena.trazado.campo} stroke={PAISAJE.lineaBorde} strokeOpacity={0.55} strokeWidth={CALZADA.campo + 3} fill="none" />
-              <Path d={escena.trazado.campo} stroke={PAISAJE.asfalto} strokeWidth={CALZADA.campo} fill="none" />
-            </G>
-          ) : null}
-          {escena.trazado.ciudad ? (
-            <G>
-              <Path d={escena.trazado.ciudad} stroke={PAISAJE.acera} strokeWidth={CALZADA.ciudad + 30} fill="none" />
-              <Path d={escena.trazado.ciudad} stroke={PAISAJE.bordillo} strokeWidth={CALZADA.ciudad + 4} fill="none" />
-              <Path d={escena.trazado.ciudad} stroke={PAISAJE.asfaltoCiudad} strokeWidth={CALZADA.ciudad} fill="none" />
-            </G>
-          ) : null}
-          {escena.yEnsanche !== undefined ? (
-            <G>
-              <Path d={trapecio(W / 2, escena.yEnsanche, CALZADA.campo + 14, CALZADA.ciudad + 30)} fill={PAISAJE.acera} />
-              <Path d={trapecio(W / 2, escena.yEnsanche, CALZADA.campo + 3, CALZADA.ciudad + 4)} fill={PAISAJE.bordillo} />
-              <Path d={trapecio(W / 2, escena.yEnsanche, CALZADA.campo, CALZADA.ciudad)} fill={PAISAJE.asfaltoCiudad} />
-            </G>
-          ) : null}
-          {escena.pasos.map((p, i) => (
-            <PasoPeatones key={`pp${i}`} x={p.x} y={p.y} grados={p.grados} ancho={p.ancho} />
-          ))}
-
-          {/* Línea central: azul en la parte ya recorrida */}
-          {puntos.slice(0, -1).map((p, i) => (
-            <Path
-              key={`l${i}`}
-              d={`M${p.x},${p.y}${curva(p, puntos[i + 1])}`}
-              stroke={recorrido(i + 1) ? colores.acento : PAISAJE.lineaCentral}
-              strokeOpacity={recorrido(i + 1) ? 1 : 0.45}
-              strokeWidth={recorrido(i + 1) ? 3 : 2}
-              strokeDasharray="12 12"
-              fill="none"
-            />
-          ))}
-
-          {/* Paisaje, ordenado por profundidad */}
-          {escena.piezas.map((p, i) => (
-            <PiezaPaisaje key={`z${i}`} p={p} />
-          ))}
-
-          {/* Postes de los carteles de tramo */}
-          {escena.carteles.map(({ e, x, y }) => (
-            <G key={`poste${e.t}`}>
-              <Rect x={x + 22} y={y + CARTEL.alto - 2} width={3} height={30} fill={PAISAJE.farola} />
-              <Rect x={x + CARTEL.ancho - 25} y={y + CARTEL.alto - 2} width={3} height={30} fill={PAISAJE.farola} />
-            </G>
-          ))}
-
-          {escena.entradaPueblo ? <EntradaPoblado x={escena.entradaPueblo.x} y={escena.entradaPueblo.y} nombre={NOMBRE_PUEBLO} /> : null}
-          {elementos.map((e) =>
-            e.tipo === 'entrada' ? (
-              <CartelOrientacion
-                key="entrada"
-                x={W / 2}
-                y={e.y + 6}
-                ySuelo={e.y + ALTO.entrada - 4}
-                ruta={`T-${PRIMER_TRAMO_CIUDAD + 1}`}
-                nombre="Ciudad"
-                separacion={CALZADA.ciudad + 44}
-              />
-            ) : e.tipo === 'meta' ? (
-              <Meta key="meta" x={W / 2} y={centro(e)} w={CALZADA.ciudad} />
-            ) : null,
-          )}
-          <Tunel x={W / 2} yBoca={TUNEL.boca} ancho={CALZADA.campo} W={W} />
-          <Rect x={0} y={0} width={W} height={36} fill="url(#fundido)" />
-        </Svg>
+        {trozos.map((y0) => (
+          <Trozo key={y0} y0={y0} alto={Math.min(TROZO, total - y0)} W={W} capas={capas} defs={defs} />
+        ))}
       </View>
+
+      <Coche recorrido={rutaCoche} destino={destinoCoche} activo={enPantalla} />
 
       {/* Carteles de tramo: pequeñas señales de orientación junto a la calzada */}
       {escena.carteles.map(({ e, x, y }) => {
@@ -308,7 +473,7 @@ export function CaminoNiveles() {
             accessibilityLabel={`Tramo ${e.t + 1}: ${e.tramo.titulo}${previsto ? '. Próximamente' : ''}`}
           >
             <Text style={[styles.cartelNumero, previsto && { color: colores.textoSuave, borderColor: colores.textoSuave }]}>{e.t + 1}</Text>
-            <Text style={[styles.cartelTitulo, previsto && { color: colores.textoSuave }]} numberOfLines={2}>
+            <Text style={[styles.cartelTitulo, previsto && { color: colores.textoSuave }]} numberOfLines={3}>
               {e.tramo.titulo}
             </Text>
           </View>
@@ -419,7 +584,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 21,
   },
-  cartelTitulo: { flex: 1, fontSize: 13, lineHeight: 17, fontWeight: '700', color: colores.sobreAcento },
+  cartelTitulo: { flex: 1, fontSize: 12.5, lineHeight: 16, fontWeight: '700', color: colores.sobreAcento },
   ancla: { position: 'absolute', width: 120, alignItems: 'center' },
   halo: { position: 'absolute', backgroundColor: colores.acento, opacity: 0.18 },
   nodo: {

@@ -19,6 +19,7 @@ Cada tarea indica los criterios de aceptación (CA) de `requirements.md` que cub
 - [x] 15. Camino con forma de carretera (campo y ciudad), temas 1 y 2 previstos en el camino y banner destacado del catálogo en Temario y en el capítulo. Recorrido web con 55 comprobaciones. · CA2.2, CA2.6, CA3.4
 - [x] 16. Camino más limpio: paisaje compuesto sin repeticiones, texto mínimo, carteles junto a la calzada y transición gradual a la ciudad. Simulacro de 30 preguntas con 3 fallos como máximo. · CA2.2, R5
 - [x] 17. Túnel al inicio del camino, zona de pueblo entre campo y ciudad, transiciones graduales, cartel de orientación azul a la entrada de la ciudad y simulacro de 30 minutos. Recorrido web con 57 comprobaciones. · CA2.2, R5
+- [x] 18. Un tramo por capítulo del temario (15) con un bioma propio cada uno, coche que avanza por la carretera y confeti al completar un nivel. Recorrido web con 62 comprobaciones. · CA2.2, CA2.6, CA4.0
 
 ## Decisiones tomadas durante la implementación
 

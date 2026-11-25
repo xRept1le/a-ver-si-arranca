@@ -57,6 +57,30 @@ export const PAISAJE = {
   rocaClara: '#24272B',
   hormigon: '#4A4D55',
   interiorTunel: '#050506',
+  toalla: '#3B82F6',
+  sombrilla: '#C9A64A',
+  olivo: '#4E5E45',
+  olivoClaro: '#5D6E52',
+  naranja: '#D08A3A',
+  vid: '#3E5A36',
+  uva: '#5B3A5E',
+  piedra: '#3A3D42',
+  piedraClara: '#4A4E54',
+  monte: '#2A2D33',
+  nieve: '#C9D2DB',
+  cabra: '#8A7A66',
+  cactus: '#3F6B4C',
+  puertaAzul: '#3B6FB6',
+  contenedor1: '#6E3B33',
+  contenedor2: '#2F5170',
+  contenedor3: '#5D6B3A',
+  humo: '#8B8F99',
+  placa: '#1E3A66',
+  placaLinea: '#5B7BB0',
+  arena: '#3A3426',
+  agua: '#17324A',
+  espuma: '#9FB7CC',
+  pato: '#2E6B4F',
 } as const;
 
 type Pieza = { x: number; y: number; s?: number; v?: number };
@@ -277,29 +301,6 @@ export function Farola({ x, y, s, v = 1 }: Pieza) {
   );
 }
 
-export function Semaforo({ x, y, s }: Pieza) {
-  return (
-    <En x={x} y={y} s={s}>
-      <Line x1={0} y1={0} x2={0} y2={-30} stroke={PAISAJE.farola} strokeWidth={2.5} />
-      <Rect x={-5} y={-50} width={10} height={24} rx={3} fill={PAISAJE.oscuro} />
-      <Circle cx={0} cy={-45} r={2.6} fill={PAISAJE.rojo} />
-      <Circle cx={0} cy={-38} r={2.6} fill={PAISAJE.ventanaApagada} />
-      <Circle cx={0} cy={-31} r={2.6} fill={PAISAJE.verde} />
-    </En>
-  );
-}
-
-export function ArbolCiudad({ x, y, s }: Pieza) {
-  return (
-    <En x={x} y={y} s={s}>
-      <Rect x={-7} y={-6} width={14} height={6} fill={PAISAJE.bordillo} />
-      <Rect x={-1.5} y={-20} width={3} height={14} fill={PAISAJE.tronco} />
-      <Circle cx={0} cy={-26} r={10} fill={PAISAJE.copa} />
-    </En>
-  );
-}
-
-/** Señal de entrada a poblado (S-500: fondo blanco, texto negro), sobre un poste. */
 export function EntradaPoblado({ x, y, nombre }: { x: number; y: number; nombre: string }) {
   const w = Math.max(68, nombre.length * 7.4 + 16);
   return (
@@ -484,7 +485,390 @@ export function PasoPeatones({ x, y, grados, ancho }: { x: number; y: number; gr
   );
 }
 
+// ── Biomas adicionales ────────────────────────────────────────────────
+
+export function Palmera({ x, y, s, v = 1 }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <G transform={`scale(${v} 1)`}>
+        <Path d="M0,0 C1,-16 -2,-32 3,-46" stroke={PAISAJE.tronco} strokeWidth={4} fill="none" strokeLinecap="round" />
+        {[-150, -110, -60, -20, 25].map((a) => (
+          <Path
+            key={a}
+            d="M0,0 q10,-6 20,2"
+            transform={`translate(3 -46) rotate(${a})`}
+            stroke={PAISAJE.copa}
+            strokeWidth={3.5}
+            strokeLinecap="round"
+            fill="none"
+          />
+        ))}
+      </G>
+    </En>
+  );
+}
+
+export function Sombrilla({ x, y, s, v = 1 }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <G transform={`scale(${v} 1)`}>
+        <Rect x={-2} y={-4} width={20} height={6} rx={1.5} fill={PAISAJE.toalla} />
+        <Line x1={0} y1={0} x2={2} y2={-24} stroke={PAISAJE.farola} strokeWidth={1.5} />
+        <Path d="M-12,-20 Q2,-34 16,-22 Z" fill={PAISAJE.sombrilla} />
+      </G>
+    </En>
+  );
+}
+
+export function Olivo({ x, y, s }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <Path d="M-1,0 C-3,-6 2,-10 0,-16" stroke={PAISAJE.tronco} strokeWidth={3} fill="none" />
+      <Circle cx={-6} cy={-19} r={7} fill={PAISAJE.olivo} />
+      <Circle cx={6} cy={-20} r={7} fill={PAISAJE.olivo} />
+      <Circle cx={0} cy={-25} r={8} fill={PAISAJE.olivoClaro} />
+    </En>
+  );
+}
+
+export function Naranjo({ x, y, s }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <Rect x={-1.5} y={-10} width={3} height={10} fill={PAISAJE.tronco} />
+      <Circle cx={0} cy={-19} r={11} fill={PAISAJE.copa} />
+      {[
+        [-5, -22],
+        [4, -16],
+        [5, -25],
+        [-3, -14],
+      ].map(([cx, cy]) => (
+        <Circle key={`${cx}${cy}`} cx={cx} cy={cy} r={1.8} fill={PAISAJE.naranja} />
+      ))}
+    </En>
+  );
+}
+
+/** Hilera corta de vides sobre su espaldera. */
+export function Vid({ x, y, s }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <Line x1={-14} y1={-6} x2={14} y2={-6} stroke={PAISAJE.valla} strokeWidth={1} />
+      {[-11, -4, 3, 10].map((cx) => (
+        <G key={cx}>
+          <Line x1={cx} y1={0} x2={cx} y2={-6} stroke={PAISAJE.tronco} strokeWidth={1.5} />
+          <Circle cx={cx} cy={-8} r={3.6} fill={PAISAJE.vid} />
+          <Circle cx={cx + 1.5} cy={-5.5} r={1.4} fill={PAISAJE.uva} />
+        </G>
+      ))}
+    </En>
+  );
+}
+
+export function Bodega({ x, y, s }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <Rect x={-18} y={-22} width={36} height={22} fill={PAISAJE.cal} />
+      <Polygon points="-21,-22 21,-22 0,-34" fill={PAISAJE.tejados[1]} />
+      <Path d="M-6,0 V-10 A6,6 0 0 1 6,-10 V0 Z" fill={PAISAJE.madera} />
+      {[-30, -23].map((bx) => (
+        <G key={bx}>
+          <Ellipse cx={bx} cy={-5} rx={4} ry={5} fill={PAISAJE.madera} />
+          <Line x1={bx - 4} y1={-5} x2={bx + 4} y2={-5} stroke={PAISAJE.zocalo} strokeWidth={1} />
+        </G>
+      ))}
+    </En>
+  );
+}
+
+export function Roca({ x, y, s, v = 1 }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <G transform={`scale(${v} 1)`}>
+        <Polygon points="-14,0 -10,-10 -2,-16 8,-12 14,0" fill={PAISAJE.piedra} />
+        <Polygon points="-2,-16 8,-12 4,-6 -4,-8" fill={PAISAJE.piedraClara} />
+      </G>
+    </En>
+  );
+}
+
+/** Pico de montaña con la cima nevada, para los márgenes. */
+export function Pico({ x, y, s, v = 1 }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <G transform={`scale(${v} 1)`}>
+        <Polygon points="-46,0 -8,-70 10,-46 22,-58 50,0" fill={PAISAJE.monte} />
+        <Polygon points="-8,-70 -18,-52 -10,-55 -4,-48 2,-56 10,-46" fill={PAISAJE.nieve} opacity={0.85} />
+        <Polygon points="22,-58 16,-50 22,-52 28,-47" fill={PAISAJE.nieve} opacity={0.85} />
+      </G>
+    </En>
+  );
+}
+
+export function Cabra({ x, y, s, v = 1 }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <G transform={`scale(${v} 1)`}>
+        {[-8, -4, 5, 9].map((px) => (
+          <Line key={px} x1={px} y1={-9} x2={px} y2={0} stroke={PAISAJE.cabra} strokeWidth={2} />
+        ))}
+        <Ellipse cx={0} cy={-12} rx={11} ry={5} fill={PAISAJE.cabra} />
+        <Polygon points="8,-14 12,-15 15,-23 11,-24" fill={PAISAJE.cabra} />
+        <Ellipse cx={15} cy={-24} rx={4} ry={2.6} fill={PAISAJE.cabra} />
+        <Path d="M13,-26 q-4,-6 -8,-4" stroke={PAISAJE.cuerna} strokeWidth={1.6} fill="none" />
+      </G>
+    </En>
+  );
+}
+
+export function PinoNevado({ x, y, s }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <Rect x={-3} y={-10} width={6} height={10} fill={PAISAJE.tronco} />
+      <Polygon points="-18,-10 18,-10 0,-36" fill={PAISAJE.pinoOscuro} />
+      <Polygon points="-15,-24 15,-24 0,-48" fill={PAISAJE.pino} />
+      <Polygon points="-11,-37 11,-37 0,-58" fill={PAISAJE.pino} />
+      <Polygon points="-6,-48 6,-48 0,-58" fill={PAISAJE.nieve} />
+      <Polygon points="-9,-30 0,-34 9,-30 0,-40" fill={PAISAJE.nieve} opacity={0.8} />
+    </En>
+  );
+}
+
+export function Cabana({ x, y, s }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <Rect x={-14} y={-18} width={28} height={18} fill={PAISAJE.madera} />
+      <Polygon points="-18,-17 18,-17 0,-33" fill={PAISAJE.monte} />
+      <Polygon points="-18,-17 -12,-17 0,-28 12,-17 18,-17 0,-33" fill={PAISAJE.nieve} />
+      <Rect x={-3} y={-10} width={6} height={10} fill={PAISAJE.oscuro} />
+      <Rect x={6} y={-13} width={5} height={5} fill={PAISAJE.ventana} opacity={0.8} />
+    </En>
+  );
+}
+
+export function Cactus({ x, y, s, v = 1 }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <G transform={`scale(${v} 1)`}>
+        <Rect x={-3.5} y={-34} width={7} height={34} rx={3.5} fill={PAISAJE.cactus} />
+        <Path d="M-3,-16 h-6 v-10" stroke={PAISAJE.cactus} strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <Path d="M3,-22 h6 v-8" stroke={PAISAJE.cactus} strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      </G>
+    </En>
+  );
+}
+
+export function Matojo({ x, y, s }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <Circle cx={0} cy={-5} r={5} fill="none" stroke={PAISAJE.paja} strokeWidth={1.2} />
+      <Circle cx={0} cy={-5} r={2.5} fill="none" stroke={PAISAJE.pajaOscura} strokeWidth={1} />
+    </En>
+  );
+}
+
+export function Sauce({ x, y, s }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <Rect x={-2} y={-18} width={4} height={18} fill={PAISAJE.tronco} />
+      <Ellipse cx={0} cy={-26} rx={15} ry={10} fill={PAISAJE.copa} />
+      {[-12, -6, 0, 6, 12].map((dx) => (
+        <Path key={dx} d={`M${dx},-26 q${dx / 4},12 ${dx / 2},20`} stroke={PAISAJE.copaClara} strokeWidth={2} fill="none" />
+      ))}
+    </En>
+  );
+}
+
+export function Junco({ x, y, s }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      {[-4, -1, 2, 5].map((dx, i) => (
+        <G key={dx}>
+          <Line x1={dx} y1={0} x2={dx + (i % 2 ? 1 : -1)} y2={-14 - i * 2} stroke={PAISAJE.copa} strokeWidth={1.3} />
+          {i % 2 === 0 ? <Rect x={dx - 1.6} y={-17 - i * 2} width={3} height={6} rx={1.5} fill={PAISAJE.tronco} /> : null}
+        </G>
+      ))}
+    </En>
+  );
+}
+
+/** Barraca valenciana: casa encalada con tejado de dos aguas muy inclinado. */
+export function Barraca({ x, y, s }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <Rect x={-13} y={-14} width={26} height={14} fill={PAISAJE.cal} />
+      <Polygon points="-16,-14 16,-14 0,-38" fill={PAISAJE.paja} />
+      <Line x1={-6} y1={-27} x2={6} y2={-27} stroke={PAISAJE.blanco} strokeWidth={1.2} opacity={0.6} />
+      <Rect x={-3} y={-9} width={6} height={9} fill={PAISAJE.puertaAzul} />
+    </En>
+  );
+}
+
+/** Nave industrial con cubierta en diente de sierra; ancho `w` y alto `h`. */
+export function Nave({ x, y, w, h, semilla }: { x: number; y: number; w: number; h: number; semilla: number }) {
+  const dientes = Math.max(2, Math.round(w / 14));
+  const paso = w / dientes;
+  let techo = `M${-w / 2},${-h}`;
+  for (let i = 0; i < dientes; i++) techo += ` L${-w / 2 + i * paso},${-h - 8} L${-w / 2 + (i + 1) * paso},${-h}`;
+  return (
+    <G transform={`translate(${x} ${y})`}>
+      <Rect x={-w / 2} y={-h} width={w} height={h} fill={PAISAJE.edificios[(semilla % 2) + 1]} />
+      <Path d={`${techo} Z`} fill={PAISAJE.bordillo} />
+      <Rect x={-w / 2 + 4} y={-12} width={Math.min(16, w / 3)} height={12} fill={PAISAJE.oscuro} />
+      <Rect x={-w / 2} y={-h + 4} width={w} height={2} fill={PAISAJE.azulSenal} opacity={0.35} />
+    </G>
+  );
+}
+
+export function Grua({ x, y, s, v = 1 }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <G transform={`scale(${v} 1)`}>
+        <Rect x={-2.5} y={-80} width={5} height={80} fill={PAISAJE.ambar} opacity={0.75} />
+        <Rect x={-14} y={-82} width={56} height={4} fill={PAISAJE.ambar} opacity={0.75} />
+        <Rect x={-14} y={-80} width={8} height={7} fill={PAISAJE.farola} />
+        <Line x1={34} y1={-78} x2={34} y2={-56} stroke={PAISAJE.farola} strokeWidth={1} />
+        <Rect x={31} y={-56} width={6} height={4} fill={PAISAJE.farola} />
+      </G>
+    </En>
+  );
+}
+
+export function Contenedores({ x, y, s }: Pieza) {
+  const colores = [PAISAJE.contenedor1, PAISAJE.contenedor2, PAISAJE.contenedor3];
+  return (
+    <En x={x} y={y} s={s}>
+      <Rect x={-22} y={-10} width={22} height={10} fill={colores[0]} />
+      <Rect x={0} y={-10} width={22} height={10} fill={colores[1]} />
+      <Rect x={-12} y={-20} width={22} height={10} fill={colores[2]} />
+    </En>
+  );
+}
+
+export function Chimenea({ x, y, s }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <Rect x={-14} y={-20} width={28} height={20} fill={PAISAJE.edificios[2]} />
+      <Polygon points="4,-20 12,-20 10,-70 6,-70" fill={PAISAJE.edificios[1]} />
+      <Rect x={5.5} y={-62} width={5} height={3} fill={PAISAJE.rojo} opacity={0.7} />
+      <Circle cx={10} cy={-78} r={6} fill={PAISAJE.humo} opacity={0.35} />
+      <Circle cx={17} cy={-86} r={8} fill={PAISAJE.humo} opacity={0.25} />
+    </En>
+  );
+}
+
+export function Aerogenerador({ x, y, s, v = 1 }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <Polygon points="-2.5,0 2.5,0 1.2,-84 -1.2,-84" fill={PAISAJE.molino} />
+      <G transform={`translate(0 -86) rotate(${v > 0 ? 12 : 47})`}>
+        {[0, 120, 240].map((a) => (
+          <Polygon key={a} points="-1.5,0 1.5,0 0.6,-36 -0.6,-36" fill={PAISAJE.molino} transform={`rotate(${a})`} />
+        ))}
+        <Circle cx={0} cy={0} r={2.6} fill={PAISAJE.molino} />
+      </G>
+    </En>
+  );
+}
+
+export function PlacaSolar({ x, y, s }: Pieza) {
+  return (
+    <En x={x} y={y} s={s}>
+      <Line x1={0} y1={0} x2={0} y2={-6} stroke={PAISAJE.farola} strokeWidth={1.5} />
+      <Polygon points="-14,-6 14,-6 10,-15 -10,-15" fill={PAISAJE.placa} />
+      <Line x1={-12} y1={-10.5} x2={12} y2={-10.5} stroke={PAISAJE.placaLinea} strokeWidth={0.8} />
+      <Line x1={0} y1={-6} x2={0} y2={-15} stroke={PAISAJE.placaLinea} strokeWidth={0.8} />
+    </En>
+  );
+}
+
+/** Señal de fin de poblado (S-510): como la de entrada, con una banda roja diagonal. */
+export function FinPoblado({ x, y, nombre }: { x: number; y: number; nombre: string }) {
+  const w = Math.max(68, nombre.length * 7.4 + 16);
+  return (
+    <G>
+      <EntradaPoblado x={x} y={y} nombre={nombre} />
+      <Line x1={x - w / 2 + 4} y1={y - 31} x2={x + w / 2 - 4} y2={y - 55} stroke={PAISAJE.rojo} strokeWidth={3.5} />
+    </G>
+  );
+}
+
+/** Franja de mar en un lateral, con orilla de arena, barcas y un faro. */
+export function Mar({ y0, y1, x, W }: { y0: number; y1: number; x: number; W: number }) {
+  const ondas: string[] = [];
+  for (let y = y0; y <= y1; y += 30) ondas.push(`${x + Math.sin(y / 40) * 6},${y}`);
+  const orilla = `M${W},${y0} L${ondas.join(' L')} L${W},${y1} Z`;
+  const arena = `M${W},${y0} L${ondas.map((p) => {
+    const [px, py] = p.split(',').map(Number);
+    return `${px - 12},${py}`;
+  }).join(' L')} L${W},${y1} Z`;
+  const barcas = [0.25, 0.62].map((f) => y0 + (y1 - y0) * f);
+  return (
+    <G>
+      <Path d={arena} fill={PAISAJE.arena} />
+      <Path d={orilla} fill={PAISAJE.agua} />
+      {Array.from({ length: Math.floor((y1 - y0) / 46) }, (_, i) => (
+        <Path
+          key={i}
+          d={`M${x + 18 + (i % 2) * 14},${y0 + 24 + i * 46} q4,-3 8,0 q4,-3 8,0`}
+          stroke={PAISAJE.espuma}
+          strokeWidth={1.2}
+          fill="none"
+          opacity={0.6}
+        />
+      ))}
+      {barcas.map((by, i) => (
+        <G key={by} transform={`translate(${x + 30 + i * 8} ${by})`}>
+          <Path d="M-9,0 L9,0 L6,4 L-6,4 Z" fill={PAISAJE.cal} />
+          <Line x1={0} y1={0} x2={0} y2={-14} stroke={PAISAJE.farola} strokeWidth={1} />
+          <Polygon points="1,-13 1,-2 9,-2" fill={PAISAJE.blanco} opacity={0.8} />
+        </G>
+      ))}
+      <G transform={`translate(${x + 26} ${y0 + (y1 - y0) * 0.45})`}>
+        <Polygon points="-6,0 6,0 4,-36 -4,-36" fill={PAISAJE.blanco} opacity={0.9} />
+        <Rect x={-5} y={-24} width={10} height={5} fill={PAISAJE.rojo} opacity={0.8} />
+        <Rect x={-5} y={-42} width={10} height={6} fill={PAISAJE.oscuro} />
+        <Circle cx={0} cy={-39} r={8} fill={PAISAJE.luz} opacity={0.18} />
+        <Circle cx={0} cy={-39} r={2.4} fill={PAISAJE.luz} />
+      </G>
+    </G>
+  );
+}
+
+/**
+ * Río que cruza la pantalla en horizontal a la altura `y`, con un puente donde lo cruza
+ * la carretera (en `xPuente`, con dirección `grados`) y algún pato.
+ */
+export function Rio({ y, W, xPuente, grados, anchoCalzada }: { y: number; W: number; xPuente: number; grados: number; anchoCalzada: number }) {
+  const puntos: string[] = [];
+  for (let x = 0; x <= W; x += 20) puntos.push(`${x},${y - 16 + Math.sin(x / 50) * 5}`);
+  const abajo: string[] = [];
+  for (let x = W; x >= 0; x -= 20) abajo.push(`${x},${y + 16 + Math.sin(x / 50 + 1) * 5}`);
+  const patos = [0.12, 0.82].map((f) => f * W).filter((px) => Math.abs(px - xPuente) > 70);
+  const largo = 46;
+  return (
+    <G>
+      <Path d={`M${puntos.join(' L')} L${abajo.join(' L')} Z`} fill={PAISAJE.agua} />
+      {[0.3, 0.55, 0.92].map((f) => (
+        <Path key={f} d={`M${f * W},${y + 2} q5,-3 10,0 q5,-3 10,0`} stroke={PAISAJE.espuma} strokeWidth={1.1} fill="none" opacity={0.5} />
+      ))}
+      {patos.map((px) => (
+        <G key={px} transform={`translate(${px} ${y + 4})`}>
+          <Ellipse cx={0} cy={0} rx={6} ry={3.5} fill={PAISAJE.lana} opacity={0.9} />
+          <Circle cx={5} cy={-3} r={2.4} fill={PAISAJE.pato} />
+          <Polygon points="7,-3 10,-2.4 7,-1.8" fill={PAISAJE.ambar} />
+        </G>
+      ))}
+      {/* Pretiles del puente */}
+      <G transform={`translate(${xPuente} ${y}) rotate(${grados})`}>
+        <Rect x={-largo / 2} y={-anchoCalzada / 2 - 6} width={largo} height={4} fill={PAISAJE.hormigon} />
+        <Rect x={-largo / 2} y={anchoCalzada / 2 + 2} width={largo} height={4} fill={PAISAJE.hormigon} />
+      </G>
+    </G>
+  );
+}
+
 // ── Composición ───────────────────────────────────────────────────────
+
 
 export type TipoPieza =
   | 'pino'
@@ -500,11 +884,257 @@ export type TipoPieza =
   | 'casa'
   | 'edificio'
   | 'farola'
-  | 'semaforo'
-  | 'arbolCiudad'
   | 'casaPueblo'
   | 'iglesia'
-  | 'huerto';
+  | 'huerto'
+  | 'palmera'
+  | 'sombrilla'
+  | 'olivo'
+  | 'naranjo'
+  | 'vid'
+  | 'bodega'
+  | 'roca'
+  | 'pico'
+  | 'cabra'
+  | 'pinoNevado'
+  | 'cabana'
+  | 'cactus'
+  | 'matojo'
+  | 'sauce'
+  | 'junco'
+  | 'barraca'
+  | 'nave'
+  | 'grua'
+  | 'contenedores'
+  | 'chimenea'
+  | 'aerogenerador'
+  | 'placaSolar';
+
+/** Altura y medio ancho aproximados de cada pieza a escala 1, para no invadir la calzada. */
+const TAMANO: Record<TipoPieza, [alto: number, medio: number]> = {
+  pino: [58, 18],
+  arbol: [53, 21],
+  arbusto: [18, 14],
+  hierba: [9, 3],
+  oveja: [24, 18],
+  vaca: [37, 22],
+  ciervo: [58, 18],
+  conejo: [28, 10],
+  molino: [72, 32],
+  fardo: [22, 11],
+  casa: [34, 17],
+  edificio: [0, 0],
+  farola: [46, 10],
+  casaPueblo: [0, 0],
+  iglesia: [68, 26],
+  huerto: [16, 22],
+  palmera: [64, 24],
+  sombrilla: [30, 16],
+  olivo: [33, 13],
+  naranjo: [30, 11],
+  vid: [12, 14],
+  bodega: [34, 34],
+  roca: [16, 14],
+  pico: [70, 48],
+  cabra: [27, 12],
+  pinoNevado: [58, 18],
+  cabana: [33, 18],
+  cactus: [34, 10],
+  matojo: [10, 5],
+  sauce: [36, 16],
+  junco: [20, 6],
+  barraca: [38, 16],
+  nave: [0, 0],
+  grua: [84, 44],
+  contenedores: [20, 22],
+  chimenea: [92, 18],
+  aerogenerador: [122, 38],
+  placaSolar: [15, 14],
+};
+
+export type BiomaId =
+  | 'prado'
+  | 'bosque'
+  | 'cultivo'
+  | 'pueblo'
+  | 'ciudad'
+  | 'industrial'
+  | 'costa'
+  | 'olivar'
+  | 'montana'
+  | 'vinedo'
+  | 'rio'
+  | 'desierto'
+  | 'nieve'
+  | 'naranjal'
+  | 'renovables';
+
+interface Singular {
+  tipo: TipoPieza;
+  peso: number;
+  /** Número de piezas del grupo (rebaño, fardos…). */
+  grupo?: number;
+  escala?: number;
+  /** Se coloca pegado a los márgenes de la pantalla. */
+  borde?: boolean;
+  /** Número máximo en todo el bioma. */
+  maximo?: number;
+}
+
+export interface Bioma {
+  fondo: string;
+  /** Calzada urbana, con aceras. */
+  urbano?: boolean;
+  /** Vegetación o cultivo principal, repartido con un campo de densidad (tipo, peso). */
+  relleno: [TipoPieza, number][];
+  /** Ajuste de la densidad del relleno: positivo, más lleno. */
+  densidad: number;
+  /** El relleno forma parcelas de hileras alineadas. */
+  hileras?: boolean;
+  /** Piezas bajas y dispersas. */
+  matorral?: TipoPieza[];
+  /** Pequeños detalles de suelo. */
+  suelo?: boolean;
+  /** Elementos singulares: pocos y separados. */
+  singulares: Singular[];
+  /** Separación mínima en vertical entre singulares (px). */
+  separacion?: number;
+  /** Construcciones que se apiñan junto a la carretera. */
+  junto?: 'casaPueblo' | 'edificio' | 'nave';
+  /** Distancia entre farolas a lo largo de la carretera. */
+  farolas?: number;
+  /** Elemento de fondo propio del bioma. */
+  especial?: 'mar' | 'rio';
+}
+
+/** Biomas del camino. Los tonos son apagados para que destaquen los niveles. */
+export const BIOMAS: Record<BiomaId, Bioma> = {
+  prado: {
+    fondo: '#0E1511',
+    relleno: [['arbol', 3], ['pino', 1]],
+    densidad: -0.05,
+    matorral: ['arbusto'],
+    suelo: true,
+    singulares: [{ tipo: 'oveja', peso: 3, grupo: 3, escala: 0.8 }, { tipo: 'vaca', peso: 2, escala: 0.9 }],
+  },
+  bosque: {
+    fondo: '#0C130F',
+    relleno: [['pino', 3], ['arbol', 2]],
+    densidad: 0.14,
+    matorral: ['arbusto'],
+    suelo: true,
+    singulares: [{ tipo: 'ciervo', peso: 3, escala: 0.85 }, { tipo: 'conejo', peso: 2, escala: 0.9 }],
+  },
+  cultivo: {
+    fondo: '#11140E',
+    relleno: [['arbol', 2], ['pino', 1]],
+    densidad: -0.14,
+    matorral: ['arbusto'],
+    suelo: true,
+    singulares: [{ tipo: 'molino', peso: 2, escala: 0.95 }, { tipo: 'fardo', peso: 2, grupo: 3, escala: 0.75 }],
+  },
+  pueblo: {
+    fondo: '#13120E',
+    relleno: [['arbol', 1]],
+    densidad: -0.3,
+    matorral: ['arbusto'],
+    suelo: true,
+    singulares: [{ tipo: 'iglesia', peso: 6, maximo: 1 }, { tipo: 'huerto', peso: 2, escala: 0.9 }],
+    separacion: 200,
+    junto: 'casaPueblo',
+    farolas: 250,
+  },
+  ciudad: { fondo: '#101216', urbano: true, relleno: [], densidad: -1, singulares: [], junto: 'edificio', farolas: 150 },
+  industrial: {
+    fondo: '#111214',
+    relleno: [['arbol', 2], ['pino', 1]],
+    densidad: -0.25,
+    matorral: ['arbusto'],
+    suelo: true,
+    singulares: [{ tipo: 'grua', peso: 2 }, { tipo: 'chimenea', peso: 2, escala: 0.9 }, { tipo: 'contenedores', peso: 3 }],
+    separacion: 150,
+    junto: 'nave',
+    farolas: 210,
+  },
+  costa: {
+    fondo: '#13140F',
+    relleno: [['palmera', 3], ['arbusto', 1]],
+    densidad: -0.22,
+    suelo: true,
+    singulares: [{ tipo: 'sombrilla', peso: 3, grupo: 2 }],
+    separacion: 220,
+    especial: 'mar',
+  },
+  olivar: {
+    fondo: '#15140E',
+    relleno: [['olivo', 1]],
+    densidad: 0.08,
+    hileras: true,
+    suelo: true,
+    singulares: [{ tipo: 'casa', peso: 1, escala: 0.9 }],
+    separacion: 420,
+  },
+  montana: {
+    fondo: '#121418',
+    relleno: [['pino', 2], ['roca', 2]],
+    densidad: -0.05,
+    matorral: ['roca'],
+    singulares: [{ tipo: 'pico', peso: 3, borde: true, escala: 1.05 }, { tipo: 'cabra', peso: 1 }],
+    separacion: 170,
+  },
+  vinedo: {
+    fondo: '#16120E',
+    relleno: [['vid', 1]],
+    densidad: 0.12,
+    hileras: true,
+    suelo: true,
+    singulares: [{ tipo: 'bodega', peso: 1 }],
+    separacion: 420,
+  },
+  rio: {
+    fondo: '#0D1412',
+    relleno: [['sauce', 2], ['arbol', 2]],
+    densidad: -0.08,
+    matorral: ['junco', 'arbusto'],
+    suelo: true,
+    singulares: [{ tipo: 'conejo', peso: 1, escala: 0.9 }],
+    especial: 'rio',
+  },
+  desierto: {
+    fondo: '#19150F',
+    relleno: [['cactus', 3], ['roca', 1]],
+    densidad: -0.12,
+    matorral: ['matojo', 'roca'],
+    singulares: [{ tipo: 'roca', peso: 2, escala: 1.6 }, { tipo: 'casa', peso: 1, escala: 0.85 }],
+    separacion: 260,
+  },
+  nieve: {
+    fondo: '#1A1E23',
+    relleno: [['pinoNevado', 1]],
+    densidad: 0.05,
+    matorral: ['roca'],
+    singulares: [{ tipo: 'cabana', peso: 2 }, { tipo: 'ciervo', peso: 1, escala: 0.8 }],
+    separacion: 300,
+  },
+  naranjal: {
+    fondo: '#0F150F',
+    relleno: [['naranjo', 1]],
+    densidad: 0.08,
+    hileras: true,
+    suelo: true,
+    singulares: [{ tipo: 'barraca', peso: 1 }],
+    separacion: 380,
+  },
+  renovables: {
+    fondo: '#0F1412',
+    relleno: [['placaSolar', 1]],
+    densidad: -0.05,
+    hileras: true,
+    suelo: true,
+    singulares: [{ tipo: 'aerogenerador', peso: 1, escala: 0.85 }],
+    separacion: 150,
+  },
+};
 
 export interface PiezaColocada {
   tipo: TipoPieza;
@@ -522,28 +1152,30 @@ interface Punto {
   y: number;
 }
 
-interface Zona {
+export interface Zona {
   x0: number;
   y0: number;
   x1: number;
   y1: number;
 }
 
+export interface ZonaBioma {
+  y0: number;
+  y1: number;
+  bioma: BiomaId;
+}
+
 export interface EntradaComposicion {
   ancho: number;
   alto: number;
-  /** y a partir de la cual empieza el pueblo, entre el campo y la ciudad. */
-  yPueblo: number;
-  /** y a partir de la cual empieza la ciudad. */
-  yCiudad: number;
-  /** Puntos de paso de la carretera (tangente vertical en cada uno). */
+  /** Puntos de paso de la carretera (tangente vertical en cada uno), ordenados de arriba abajo. */
   puntos: Punto[];
-  /** Medio ancho ocupado por la calzada (con arcén o acera) en campo y en ciudad. */
+  /** Medio ancho ocupado por la calzada (con arcén o acera) fuera y dentro de la ciudad. */
   medio: { campo: number; ciudad: number };
-  /** Zonas que no se pueden decorar (carteles, etc.). */
+  /** Zonas que no se pueden decorar (niveles, carteles, agua…). */
   reservas: Zona[];
-  /** Carácter de cada tramo de campo por altura: [yInicio, yFin, carácter]. */
-  tramos: { y0: number; y1: number; caracter: 'prado' | 'bosque' | 'cultivo' }[];
+  /** Bioma de cada franja de altura, de arriba abajo y sin huecos. */
+  zonas: ZonaBioma[];
 }
 
 function bezier(a: Punto, b: Punto, t: number): Punto {
@@ -555,33 +1187,74 @@ function bezier(a: Punto, b: Punto, t: number): Punto {
   };
 }
 
+/** Elige un elemento según su peso, con `r` en [0, 1). */
+function porPeso<T>(opciones: [T, number][], r: number): T {
+  const total = opciones.reduce((s, [, p]) => s + p, 0);
+  let acc = 0;
+  for (const [o, p] of opciones) {
+    acc += p / total;
+    if (r < acc) return o;
+  }
+  return opciones[opciones.length - 1][0];
+}
+
 /**
  * Reparte el paisaje alrededor de la carretera de forma estable (misma salida para el mismo ancho).
- * El campo se compone con un campo de densidad: los árboles forman bosquecillos y enmarcan los bordes,
- * y en los claros aparecen pocos animales, separados entre sí. Le sigue un pueblo de casas encaladas
- * y después la ciudad, cuyos edificios siguen la calle. Los cambios de zona y de tramo son graduales.
+ * Cada franja tiene su bioma. La vegetación se reparte con un campo de densidad (bosquecillos,
+ * parcelas de cultivo en hileras), los elementos singulares son escasos y separados, y las
+ * construcciones se apiñan junto a la carretera. Cerca del límite entre franjas se mezclan los dos
+ * biomas para que el cambio sea gradual.
  */
 export function componerPaisaje(e: EntradaComposicion): PiezaColocada[] {
-  const { ancho: W, yPueblo, yCiudad, puntos, medio, reservas } = e;
+  const { ancho: W, puntos, medio, reservas, zonas } = e;
   const entre = (v: number) => Math.min(1, Math.max(0, v));
 
-  // Muestras de la carretera para medir distancias.
+  // Muestras de la carretera, ordenadas por y, para medir distancias con búsqueda binaria.
   const muestras: Punto[] = [];
   for (let i = 0; i < puntos.length - 1; i++) {
     for (let k = 0; k < 18; k++) muestras.push(bezier(puntos[i], puntos[i + 1], k / 18));
   }
   muestras.push(puntos[puntos.length - 1]);
   const distancia = (x: number, y: number) => {
-    let d = Infinity;
-    for (const m of muestras) {
-      if (Math.abs(m.y - y) > d) continue;
-      const dd = Math.hypot(m.x - x, m.y - y);
-      if (dd < d) d = dd;
+    let lo = 0;
+    let hi = muestras.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (muestras[mid].y < y) lo = mid + 1;
+      else hi = mid;
     }
+    let d = Infinity;
+    for (let i = lo; i < muestras.length && muestras[i].y - y < d; i++) d = Math.min(d, Math.hypot(muestras[i].x - x, muestras[i].y - y));
+    for (let i = lo - 1; i >= 0 && y - muestras[i].y < d; i--) d = Math.min(d, Math.hypot(muestras[i].x - x, muestras[i].y - y));
     return d;
   };
   const reservado = (x: number, y: number, r = 0) =>
     reservas.some((q) => x > q.x0 - r && x < q.x1 + r && y > q.y0 - r && y < q.y1 + r);
+
+  const zonaEn = (y: number) => zonas.find((z) => y >= z.y0 && y < z.y1) ?? zonas[zonas.length - 1];
+  const urbano = (y: number) => !!BIOMAS[zonaEn(y).bioma].urbano;
+  const medioEn = (y: number) => (urbano(y) ? medio.ciudad : medio.campo);
+  // Cerca del límite entre franjas se mezclan los dos biomas.
+  const MEZCLA = 170;
+  const biomaEn = (y: number, r: number): BiomaId => {
+    const i = zonas.findIndex((z) => y >= z.y0 && y < z.y1);
+    if (i < 0) return zonas[zonas.length - 1].bioma;
+    const z = zonas[i];
+    if (i > 0 && y - z.y0 < MEZCLA && r < 0.5 * (1 - (y - z.y0) / MEZCLA)) return zonas[i - 1].bioma;
+    if (i < zonas.length - 1 && z.y1 - y < MEZCLA && r < 0.5 * (1 - (z.y1 - y) / MEZCLA)) return zonas[i + 1].bioma;
+    return z.bioma;
+  };
+  /** Comprueba que una pieza de `alto` × 2·`medioAncho` cabe sin tocar la calzada ni las reservas. */
+  const cabe = (x: number, y: number, alto: number, medioAncho: number, holgura = 6) => {
+    const m = medioEn(y);
+    return [
+      [x - medioAncho, y],
+      [x + medioAncho, y],
+      [x - medioAncho, y - alto],
+      [x + medioAncho, y - alto],
+      [x, y - alto / 2],
+    ].every(([px, py]) => distancia(px, py) > m + holgura && !reservado(px, py, 2) && py > 0);
+  };
 
   const piezas: PiezaColocada[] = [];
   const ocupados: { x: number; y: number; r: number }[] = [];
@@ -590,192 +1263,131 @@ export function componerPaisaje(e: EntradaComposicion): PiezaColocada[] {
     piezas.push(p);
     ocupados.push({ x: p.x, y: p.y, r });
   };
-  // Cerca del límite entre tramos se mezclan los dos caracteres, para que el cambio sea gradual.
-  const MEZCLA = 160;
-  const caracterEn = (y: number, r: number) => {
-    const i = e.tramos.findIndex((t) => y >= t.y0 && y < t.y1);
-    if (i < 0) return 'prado';
-    const t = e.tramos[i];
-    if (i > 0 && y - t.y0 < MEZCLA && r < 0.5 * (1 - (y - t.y0) / MEZCLA)) return e.tramos[i - 1].caracter;
-    if (i < e.tramos.length - 1 && t.y1 - y < MEZCLA && r < 0.5 * (1 - (t.y1 - y) / MEZCLA)) return e.tramos[i + 1].caracter;
-    return t.caracter;
-  };
-
-  // 1. Animales y elementos singulares, pocos y separados: primero, para que los árboles los respeten.
   let semilla = 1;
-  let ultimoAnimal = -Infinity;
-  for (let y = 120; y < yPueblo + 160; y += 46) {
-    for (let intento = 0; intento < 3; intento++) {
+
+  // 1. Construcciones junto a la carretera (casas, edificios, naves).
+  const construcciones: PiezaColocada[] = [];
+  const solapa = (x: number, y: number, w: number) =>
+    construcciones.some((b) => Math.abs(b.x - x) < ((b.w ?? 0) + w) / 2 + 3 && Math.abs(b.y - y) < 26);
+  for (let y = 40; y < e.alto - 10; y += 28) {
+    for (let x = 12; x < W; x += 28) {
       semilla++;
-      if (y - ultimoAnimal < 300) break;
-      const x = 30 + azar(semilla * 1.7) * (W - 60);
-      const d = distancia(x, y);
-      if (d < medio.campo + 46 || reservado(x, y, 30) || reservado(x, y - 50, 20) || !libre(x, y, 60)) continue;
-      if (distancia(x, y - 50) < medio.campo + 30) continue;
-      if (y > yPueblo && d < medio.campo + 110) continue;
-      const c = y > yPueblo ? 'prado' : caracterEn(y, azar(semilla * 0.7));
-      const v = (azar(semilla * 3.1) > 0.5 ? 1 : -1) as 1 | -1;
-      const r = azar(semilla * 5.3);
-      if (c === 'prado') {
-        if (r < 0.6) {
-          // Rebaño pequeño: 2 o 3 ovejas, no alineadas.
-          const n = r < 0.3 ? 3 : 2;
-          for (let k = 0; k < n; k++) {
-            const ox = x + (k - (n - 1) / 2) * 24 + (azar(semilla + k * 9) - 0.5) * 10;
-            const oy = y + (azar(semilla + k * 13) - 0.5) * 18;
-            if (distancia(ox, oy) > medio.campo + 30) poner({ tipo: 'oveja', x: ox, y: oy, s: 0.75 + azar(semilla + k) * 0.15, v, semilla }, 22);
-          }
-        } else {
-          poner({ tipo: 'vaca', x, y, s: 0.9, v, semilla }, 30);
-        }
-      } else if (c === 'bosque') {
-        poner({ tipo: r < 0.55 ? 'ciervo' : 'conejo', x, y, s: r < 0.55 ? 0.85 : 0.9, v, semilla }, 30);
-      } else if (r < 0.45) {
-        poner({ tipo: 'molino', x, y, s: 0.95, v, semilla }, 40);
+      const jx = x + (azar(semilla * 2.1) - 0.5) * 10;
+      const jy = y + (azar(semilla * 3.3) - 0.5) * 10;
+      const b = BIOMAS[biomaEn(jy, azar(semilla * 0.37))];
+      if (!b.junto) continue;
+      const m = medioEn(jy);
+      const d = distancia(jx, jy);
+      if (d < m + 8) continue;
+      const r = azar(semilla * 7.7);
+      const cerca = b.junto === 'nave' ? (d < m + 90 ? 0.32 : 0.06) : d < m + 70 ? 1 : d < m + 130 ? 0.4 : 0.1;
+      if (r > (b.junto === 'edificio' ? 0.5 : 0.55) * cerca) continue;
+      const z = zonaEn(jy);
+      let w: number;
+      let h: number;
+      let alto: number;
+      if (b.junto === 'casaPueblo') {
+        w = 20 + Math.round(azar(semilla * 4.9) * 14);
+        h = 12 + Math.round(azar(semilla * 5.7) * 8);
+        alto = h + w * 0.32 + 6;
+      } else if (b.junto === 'nave') {
+        w = 40 + Math.round(azar(semilla * 4.9) * 24);
+        h = 16 + Math.round(azar(semilla * 5.7) * 12);
+        alto = h + 9;
       } else {
-        const n = r < 0.8 ? 2 : 3;
-        for (let k = 0; k < n; k++) poner({ tipo: 'fardo', x: x + k * 26 * v, y: y + k * 6, s: 0.75, v, semilla }, 16);
+        // Los edificios empiezan bajos y ganan altura hacia el centro de la ciudad.
+        const centro = entre((jy - z.y0 - 60) / 260) * entre((z.y1 - jy - 60) / 260);
+        w = 22 + Math.round(azar(semilla * 2.9) * 14);
+        h = 30 + Math.round(azar(semilla * 4.3) * (14 + 46 * centro));
+        while (h >= 30 && !cabe(jx, jy, h, w / 2, 12)) h -= 12;
+        if (h < 30) continue;
+        alto = h;
       }
-      ultimoAnimal = y;
+      if (!cabe(jx, jy, alto, w / 2, b.junto === 'edificio' ? 12 : 6) || solapa(jx, jy, w)) continue;
+      const tipo: TipoPieza = b.junto;
+      const p: PiezaColocada = { tipo, x: jx, y: jy, s: 1, v: 1, w, h, semilla };
+      construcciones.push(p);
+      piezas.push(p);
+    }
+  }
+
+  // 2. Elementos singulares: pocos y separados.
+  const cuenta: Partial<Record<TipoPieza, number>> = {};
+  let ultimo = -Infinity;
+  for (let y = 150; y < e.alto - 40; y += 40) {
+    for (let intento = 0; intento < 4; intento++) {
+      semilla++;
+      const bioma = biomaEn(y, azar(semilla * 0.53));
+      const b = BIOMAS[bioma];
+      if (!b.singulares.length || y - ultimo < (b.separacion ?? 300)) break;
+      const opciones = b.singulares.filter((s) => s.maximo === undefined || (cuenta[s.tipo] ?? 0) < s.maximo);
+      if (!opciones.length) break;
+      const s = porPeso(opciones.map((o) => [o, o.peso] as [Singular, number]), azar(semilla * 5.3));
+      const esc = s.escala ?? 1;
+      const [alto, medioAncho] = TAMANO[s.tipo];
+      const r = azar(semilla * 1.7);
+      const x = s.borde ? (r < 0.5 ? 8 + r * 40 : W - 8 - (r - 0.5) * 40) : 30 + r * (W - 60);
+      const v = (azar(semilla * 3.1) > 0.5 ? 1 : -1) as 1 | -1;
+      const n = s.grupo ?? 1;
+      const ancho = medioAncho * esc + (n - 1) * 12;
+      if (!cabe(x, y, alto * esc, ancho, 24) || !libre(x, y, ancho + 10)) continue;
+      for (let k = 0; k < n; k++) {
+        const ox = x + (k - (n - 1) / 2) * 24 + (azar(semilla + k * 9) - 0.5) * 8;
+        const oy = y + (azar(semilla + k * 13) - 0.5) * 16;
+        poner({ tipo: s.tipo, x: ox, y: oy, s: esc * (0.92 + azar(semilla + k) * 0.16), v, semilla: semilla + k }, medioAncho * esc + 6);
+      }
+      cuenta[s.tipo] = (cuenta[s.tipo] ?? 0) + 1;
+      ultimo = y;
       break;
     }
   }
 
-  // 2. Vegetación del campo con un campo de densidad: bosquecillos y bordes más poblados.
+  // 3. Vegetación y cultivos con un campo de densidad: bosquecillos, parcelas en hileras y bordes más poblados.
   const fase1 = azar(7) * 6.28;
   const fase2 = azar(11) * 6.28;
-  for (let y = 10; y < yCiudad; y += 24) {
+  for (let y = 10; y < e.alto; y += 24) {
     for (let x = 6; x < W; x += 24) {
       semilla++;
-      const jx = x + (azar(semilla * 2.3) - 0.5) * 18;
-      const jy = y + (azar(semilla * 4.1) - 0.5) * 18;
-      const c = caracterEn(jy, azar(semilla * 9.7));
-      const borde = Math.max(0, 1 - Math.min(jx, W - jx) / 70) * 0.35;
-      const base = c === 'bosque' ? 0.12 : c === 'cultivo' ? -0.12 : -0.05;
-      // En el pueblo hay menos árboles, y desaparecen al llegar a la ciudad.
-      const rural = entre((jy - yPueblo + 80) / 240);
-      const densidad =
-        0.5 + 0.5 * Math.sin(jx * 0.021 + fase1) * Math.cos(jy * 0.013 + fase2) + borde + base - 0.3 * rural - 0.6 * entre((jy - yCiudad + 60) / 120);
+      const bioma = biomaEn(y, azar(semilla * 9.7));
+      const b = BIOMAS[bioma];
+      const fila = Math.round(y / 24);
+      const jx = b.hileras ? x + (fila % 2) * 12 : x + (azar(semilla * 2.3) - 0.5) * 18;
+      const jy = b.hileras ? y : y + (azar(semilla * 4.1) - 0.5) * 18;
+      const borde = Math.max(0, 1 - Math.min(jx, W - jx) / 70) * (b.hileras ? 0.1 : 0.35);
+      const densidad = 0.5 + 0.5 * Math.sin(jx * 0.021 + fase1) * Math.cos(jy * 0.013 + fase2) + borde + b.densidad;
       const d = distancia(jx, jy);
-      if (d < medio.campo + 14 || reservado(jx, jy, 8) || reservado(jx, jy - 40, 4)) continue;
+      if (d < medioEn(jy) + 14 || reservado(jx, jy, 8)) continue;
       const r = azar(semilla * 6.7);
-      if (densidad > 0.78 && r < 0.75) {
-        const tipo: TipoPieza = c === 'bosque' ? (r < 0.6 ? 'pino' : 'arbol') : r < 0.3 ? 'pino' : 'arbol';
-        const s = 0.6 + azar(semilla * 8.9) * 0.45;
-        // La copa crece hacia arriba: comprueba también su parte alta.
-        if (distancia(jx, jy - 50 * s) < medio.campo + 8 || !libre(jx, jy, 12 * s)) continue;
-        poner({ tipo, x: jx, y: jy, s, v: 1, semilla }, 12 * s);
-      } else if (densidad > 0.62 && r < 0.18 && libre(jx, jy, 10)) {
-        poner({ tipo: 'arbusto', x: jx, y: jy, s: 0.6 + r * 1.5, v: 1, semilla }, 10);
-      } else if (jy > yPueblo - 280 && jy < yPueblo && r > 0.975 && d > medio.campo + 40 && libre(jx, jy, 30)) {
-        // Afueras: algún cortijo suelto antes del pueblo.
-        poner({ tipo: 'casa', x: jx, y: jy, s: 0.9, v: 1, semilla }, 30);
-      } else if (r > 0.9) {
+      if (b.relleno.length && densidad > (b.hileras ? 0.6 : 0.78) && (b.hileras || r < 0.75)) {
+        const tipo = porPeso(b.relleno, azar(semilla * 3.9));
+        const esc = b.hileras ? 0.9 + azar(semilla * 8.9) * 0.12 : 0.6 + azar(semilla * 8.9) * 0.45;
+        const [alto, medioAncho] = TAMANO[tipo];
+        if (!cabe(jx, jy, alto * esc, medioAncho * esc * 0.6, 6) || !libre(jx, jy, medioAncho * esc * 0.55)) continue;
+        poner({ tipo, x: jx, y: jy, s: esc, v: azar(semilla) > 0.5 ? 1 : -1, semilla }, medioAncho * esc * 0.55);
+      } else if (b.matorral && densidad > 0.6 && r < 0.16 && libre(jx, jy, 10)) {
+        const tipo = b.matorral[Math.floor(azar(semilla * 2.7) * b.matorral.length)];
+        const esc = 0.6 + r * 2;
+        if (cabe(jx, jy, TAMANO[tipo][0] * esc, TAMANO[tipo][1] * esc, 4)) poner({ tipo, x: jx, y: jy, s: esc, v: 1, semilla }, 10);
+      } else if (b.suelo && r > 0.9) {
         piezas.push({ tipo: 'hierba', x: jx, y: jy, s: 1, v: 1, semilla });
       }
     }
   }
 
-  // 3. Pueblo: casas encaladas junto a la carretera, más densas en el centro del pueblo,
-  // que continúan un poco dentro de la ciudad para que el cambio no sea brusco.
-  const casas: PiezaColocada[] = [];
-  const solapa = (x: number, y: number, w: number) =>
-    casas.some((b) => Math.abs(b.x - x) < ((b.w ?? 0) + w) / 2 + 3 && Math.abs(b.y - y) < 26);
-  let iglesia = false;
-  for (let y = yPueblo - 40; y < yCiudad + 170; y += 28) {
-    for (let x = 12; x < W; x += 28) {
-      semilla++;
-      const jx = x + (azar(semilla * 2.1) - 0.5) * 10;
-      const jy = y + (azar(semilla * 3.3) - 0.5) * 10;
-      const ciudad = jy >= yCiudad;
-      const m = ciudad ? medio.ciudad : medio.campo;
-      const d = distancia(jx, jy);
-      if (d < m + 8 || reservado(jx, jy, 6)) continue;
-      const r = azar(semilla * 7.7);
-      const intensidad = entre((jy - yPueblo + 40) / 200) * (1 - entre((jy - yCiudad) / 170));
-      if (!iglesia && !ciudad && jy > yPueblo + 200 && d > m + 30 && d < m + 100 && r < 0.3) {
-        const cabe = [
-          [jx - 26, jy],
-          [jx + 26, jy],
-          [jx + 18, jy - 68],
-          [jx - 18, jy - 68],
-          [jx, jy - 34],
-        ].every(([px, py]) => distancia(px, py) > m + 8 && !reservado(px, py, 4));
-        if (cabe && !solapa(jx, jy, 50) && libre(jx, jy, 30)) {
-          const ig: PiezaColocada = { tipo: 'iglesia', x: jx, y: jy, s: 1, v: jx < W / 2 ? 1 : -1, w: 50, semilla };
-          casas.push(ig);
-          poner(ig, 30);
-          iglesia = true;
-          continue;
-        }
-      }
-      const cerca = d < m + 70 ? 1 : d < m + 130 ? 0.4 : 0.1;
-      if (r > 0.55 * intensidad * cerca) {
-        if (!ciudad && jy > yPueblo + 40 && d > m + 110 && r > 0.985 && libre(jx, jy, 26)) {
-          poner({ tipo: 'huerto', x: jx, y: jy, s: 0.9, v: 1, semilla }, 26);
-        }
-        continue;
-      }
-      const w = 20 + Math.round(azar(semilla * 4.9) * 14);
-      const h = 12 + Math.round(azar(semilla * 5.7) * 8);
-      const alto = h + w * 0.32 + 6;
-      const cabe = [
-        [jx - w / 2, jy],
-        [jx + w / 2, jy],
-        [jx - w / 2, jy - alto],
-        [jx + w / 2, jy - alto],
-      ].every(([px, py]) => distancia(px, py) > m + 6 && !reservado(px, py, 3));
-      if (!cabe || solapa(jx, jy, w) || !libre(jx, jy, w / 2)) continue;
-      const c: PiezaColocada = { tipo: 'casaPueblo', x: jx, y: jy, s: 1, v: 1, w, h, semilla };
-      casas.push(c);
-      piezas.push(c);
-    }
-  }
-
-  // 4. Ciudad: edificios que siguen la calle, sin invadir la acera. Empiezan bajos y
-  // ganan altura hacia el centro.
-  const edificios: PiezaColocada[] = [];
-  for (let y = yCiudad + 50; y < e.alto - 10; y += 34) {
-    for (let x = 14; x < W; x += 30) {
-      semilla++;
-      const jx = x + (azar(semilla * 1.9) - 0.5) * 8;
-      const jy = y + (azar(semilla * 3.7) - 0.5) * 10;
-      const centroCiudad = entre((jy - yCiudad - 60) / 260);
-      if (azar(semilla * 5.9) < 0.5 + 0.3 * (1 - centroCiudad) || reservado(jx, jy, 6)) continue;
-      const w = 22 + Math.round(azar(semilla * 2.9) * 14);
-      let h = 30 + Math.round(azar(semilla * 4.3) * (14 + 46 * centroCiudad));
-      const cabe = (hh: number) =>
-        [
-          [jx - w / 2, jy],
-          [jx + w / 2, jy],
-          [jx - w / 2, jy - hh],
-          [jx + w / 2, jy - hh],
-          [jx, jy - hh / 2],
-        ].every(([px, py]) => distancia(px, py) > medio.ciudad + 12 && py > yCiudad + 10 && !reservado(px, py, 4));
-      while (h >= 30 && !cabe(h)) h -= 12;
-      if (h < 30) continue;
-      if (edificios.some((b) => Math.abs(b.x - jx) < ((b.w ?? 0) + w) / 2 - 2 && Math.abs(b.y - jy) < 30)) continue;
-      if (solapa(jx, jy, w)) continue;
-      const b: PiezaColocada = { tipo: 'edificio', x: jx, y: jy, s: 1, v: 1, w, h, semilla };
-      edificios.push(b);
-      piezas.push(b);
-    }
-  }
-
-  // 5. Farolas a intervalos regulares, alternando lados: espaciadas en el pueblo y más seguidas en la ciudad.
+  // 4. Farolas a intervalos regulares, alternando lados, donde el bioma las tiene.
   let recorrido = 0;
   let lado = 1;
   for (let i = 1; i < muestras.length; i++) {
     const a = muestras[i - 1];
     const b = muestras[i];
     recorrido += Math.hypot(b.x - a.x, b.y - a.y);
-    const enCiudad = b.y >= yCiudad + 30;
-    if (b.y < yPueblo + 80 || recorrido < (enCiudad ? 150 : 250)) continue;
+    const intervalo = BIOMAS[zonaEn(b.y).bioma].farolas;
+    if (!intervalo || recorrido < intervalo) continue;
     recorrido = 0;
-    const separacion = enCiudad ? medio.ciudad - 8 : medio.campo + 6;
     const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
     const nx = -(b.y - a.y) / len;
     const ny = (b.x - a.x) / len;
+    const separacion = urbano(b.y) ? medio.ciudad - 8 : medio.campo + 6;
     const px = b.x + nx * lado * separacion;
     const py = b.y + ny * lado * separacion;
     if (!reservado(px, py, 10) && py < e.alto - 20) {
@@ -789,42 +1401,83 @@ export function componerPaisaje(e: EntradaComposicion): PiezaColocada[] {
 
 /** Dibuja una pieza colocada por `componerPaisaje`. */
 export function PiezaPaisaje({ p }: { p: PiezaColocada }) {
+  const comun = { x: p.x, y: p.y, s: p.s, v: p.v };
   switch (p.tipo) {
     case 'pino':
-      return <Pino x={p.x} y={p.y} s={p.s} />;
+      return <Pino {...comun} />;
     case 'arbol':
-      return <Arbol x={p.x} y={p.y} s={p.s} />;
+      return <Arbol {...comun} />;
     case 'arbusto':
-      return <Arbusto x={p.x} y={p.y} s={p.s} />;
+      return <Arbusto {...comun} />;
     case 'hierba':
-      return <Hierba x={p.x} y={p.y} />;
+      return <Hierba {...comun} />;
     case 'oveja':
-      return <Oveja x={p.x} y={p.y} s={p.s} v={p.v} />;
+      return <Oveja {...comun} />;
     case 'vaca':
-      return <Vaca x={p.x} y={p.y} s={p.s} v={p.v} />;
+      return <Vaca {...comun} />;
     case 'ciervo':
-      return <Ciervo x={p.x} y={p.y} s={p.s} v={p.v} />;
+      return <Ciervo {...comun} />;
     case 'conejo':
-      return <Conejo x={p.x} y={p.y} s={p.s} v={p.v} />;
+      return <Conejo {...comun} />;
     case 'molino':
-      return <Molino x={p.x} y={p.y} s={p.s} />;
+      return <Molino {...comun} />;
     case 'fardo':
-      return <Fardo x={p.x} y={p.y} s={p.s} />;
+      return <Fardo {...comun} />;
     case 'casa':
-      return <Casa x={p.x} y={p.y} s={p.s} />;
+      return <Casa {...comun} />;
     case 'edificio':
       return <Edificio x={p.x} y={p.y} w={p.w ?? 30} h={p.h ?? 60} semilla={p.semilla} />;
     case 'farola':
-      return <Farola x={p.x} y={p.y} s={p.s} v={p.v} />;
-    case 'semaforo':
-      return <Semaforo x={p.x} y={p.y} s={p.s} />;
-    case 'arbolCiudad':
-      return <ArbolCiudad x={p.x} y={p.y} s={p.s} />;
+      return <Farola {...comun} />;
     case 'casaPueblo':
       return <CasaPueblo x={p.x} y={p.y} w={p.w ?? 26} h={p.h ?? 16} semilla={p.semilla} />;
     case 'iglesia':
-      return <Iglesia x={p.x} y={p.y} s={p.s} v={p.v} />;
+      return <Iglesia {...comun} />;
     case 'huerto':
-      return <Huerto x={p.x} y={p.y} s={p.s} />;
+      return <Huerto {...comun} />;
+    case 'palmera':
+      return <Palmera {...comun} />;
+    case 'sombrilla':
+      return <Sombrilla {...comun} />;
+    case 'olivo':
+      return <Olivo {...comun} />;
+    case 'naranjo':
+      return <Naranjo {...comun} />;
+    case 'vid':
+      return <Vid {...comun} />;
+    case 'bodega':
+      return <Bodega {...comun} />;
+    case 'roca':
+      return <Roca {...comun} />;
+    case 'pico':
+      return <Pico {...comun} />;
+    case 'cabra':
+      return <Cabra {...comun} />;
+    case 'pinoNevado':
+      return <PinoNevado {...comun} />;
+    case 'cabana':
+      return <Cabana {...comun} />;
+    case 'cactus':
+      return <Cactus {...comun} />;
+    case 'matojo':
+      return <Matojo {...comun} />;
+    case 'sauce':
+      return <Sauce {...comun} />;
+    case 'junco':
+      return <Junco {...comun} />;
+    case 'barraca':
+      return <Barraca {...comun} />;
+    case 'nave':
+      return <Nave x={p.x} y={p.y} w={p.w ?? 50} h={p.h ?? 20} semilla={p.semilla} />;
+    case 'grua':
+      return <Grua {...comun} />;
+    case 'contenedores':
+      return <Contenedores {...comun} />;
+    case 'chimenea':
+      return <Chimenea {...comun} />;
+    case 'aerogenerador':
+      return <Aerogenerador {...comun} />;
+    case 'placaSolar':
+      return <PlacaSolar {...comun} />;
   }
 }

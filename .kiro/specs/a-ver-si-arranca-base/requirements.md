@@ -49,11 +49,11 @@ Al comprobar se muestra: resultado (icono + texto «Correcto» / «Incorrecto»)
 
 **R2. Inicio.**
 - CA2.1 La tarjeta «Continuar» aparece en la primera vista sin desplazarse y muestra tema, nivel y duración estimada.
-- CA2.2 Debajo hay un camino vertical de niveles agrupados por tema con los tres estados de la tabla. El camino tiene forma de carretera con curvas: sale de un túnel, cruza el campo, atraviesa un pueblo en el penúltimo tramo y termina en la ciudad, con cambios de zona graduales. Los niveles son lo que destaca: el paisaje es discreto, sin patrones repetidos, y el único texto es el título de cada tramo y «Empezar» en el nivel actual.
+- CA2.2 Debajo hay un camino vertical de niveles agrupados por tema con los tres estados de la tabla. El camino tiene forma de carretera con curvas: sale de un túnel y cruza un bioma distinto por tramo (15), con cambios graduales entre ellos. Un coche azul claro espera al principio de la carretera y, cada vez que se completa un nivel, avanza hasta el siguiente. Los niveles son lo que destaca: el paisaje es discreto, sin patrones repetidos, y el único texto es el título de cada tramo y «Empezar» en el nivel actual.
 - CA2.3 Tocar un nivel completado o disponible abre su lección; uno bloqueado muestra qué nivel falta.
 - CA2.4 Hay acceso directo a Mis errores (con número de pendientes) e icono de Ajustes.
 - CA2.5 Si todos los niveles están completados, «Continuar» propone repasar errores o un simulacro.
-- CA2.6 Los temas 1 («El conductor y el permiso B») y 2 («La vía y sus usuarios») aparecen antes de Señales con 4 niveles «Próximamente» cada uno. Aún no tienen preguntas, no entran en la regla de desbloqueo y, al pulsarlos, se indica el nivel disponible.
+- CA2.6 El camino tiene un tramo por cada capítulo del temario (15), en su orden. Los capítulos sin preguntas aparecen con 4 niveles «Próximamente» cada uno: no entran en la regla de desbloqueo y, al pulsarlos, se indica el nivel disponible.
 
 **R3. Temario.**
 - CA3.1 Índice de capítulos del permiso B marcado como provisional; solo el capítulo de demostración se puede abrir; el resto indica «Próximamente».
@@ -62,6 +62,7 @@ Al comprobar se muestra: resultado (icono + texto «Correcto» / «Incorrecto»)
 - CA3.4 El capítulo «Señales y marcas viales» y el índice del Temario dan acceso, con un banner destacado, a un catálogo con todas las señales del dosier del usuario (`1110950_1.pdf`, sin las páginas 1–8 de la parte 1-45). Las señales se agrupan por familia y tipo, en el orden del dosier. Cada una muestra código, imagen y nombre, y al pulsarla se abre su descripción. El catálogo cita la fuente y está marcado como pendiente de revisión.
 
 **R4. Lección.**
+- CA4.0 Al completar un nivel se lanza un confeti sobre el resumen (no si el nivel no se supera, ni si el sistema pide reducir el movimiento).
 - CA4.1 Preguntas de tres opciones, sin límite de tiempo. Arriba hay un recuadro numerado por pregunta, como en el simulador, que marca la actual y el resultado de las ya respondidas (✓ verde, ✕ naranja).
 - CA4.2 «Comprobar» solo se activa con una opción elegida.
 - CA4.3 Tras comprobar se cumple lo descrito en «Pregunta (lección)».

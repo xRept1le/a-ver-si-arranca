@@ -23,8 +23,23 @@ async (pagina, log) => {
   // El estado de cada nivel no se muestra como texto: va al final de su etiqueta accesible.
   const estado = async (n) => (await vis('nivel-' + n).getAttribute('aria-label')).split('. ').pop();
   const etiqueta = (t) => vis(t).getAttribute('aria-label');
+  const centroY = async (t) => {
+    const c = await vis(t).boundingBox();
+    return c.y + c.height / 2;
+  };
+  // Espera a que el coche quede parado justo antes del nivel indicado.
+  const cocheAntesDe = async (n, ms = 9000) => {
+    const limite = Date.now() + ms;
+    while (Date.now() < limite) {
+      const dy = (await centroY('nivel-' + n)) - (await centroY('coche'));
+      if (dy > 10 && dy < 110) return true;
+      await page.waitForTimeout(300);
+    }
+    return false;
+  };
   const errores = [];
   page.on('pageerror', (e) => errores.push(String(e)));
+  const FOTOS = '/projects/sandbox/.kiro/artifacts/screenshots/';
 
   await page.context().unrouteAll({ behavior: 'ignoreErrors' });
   await page.context().route(ORIGEN + '/**', async (route) => {
@@ -72,6 +87,11 @@ async (pagina, log) => {
     'Camino: los temas 1 y 2 van antes de Señales',
   );
   ok((await estado('conductor-1')) === 'Próximamente', 'Camino: los niveles de los temas 1 y 2 están en preparación');
+  ok(
+    (await etiqueta('tramo-maniobras')).startsWith('Tramo 6') && (await etiqueta('tramo-eficiente')).startsWith('Tramo 15'),
+    'Camino: incluye los 15 capítulos del temario',
+  );
+  ok((await centroY('coche')) < (await centroY('nivel-conductor-1')), 'Coche: sin niveles completados, espera al principio de la carretera');
   await pulsar('nivel-via-2');
   await esperar('dialogo');
   ok((await vis('dialogo').innerText()).includes('Señales · Nivel 1'), 'Camino: un nivel en preparación remite al nivel disponible');
@@ -120,11 +140,17 @@ async (pagina, log) => {
   await esperar('sesion');
   const falladasN1 = await sesion([0]);
   ok((await vis('resumen-titulo').innerText()) === 'Nivel completado', 'Nivel con 1 fallo: completado');
+  ok((await id('confeti').count()) === 1, 'Nivel completado: lanza confeti');
+  await page.waitForTimeout(900);
+  await page.screenshot({ path: FOTOS + 'confeti.png' });
   ok(await visible('desbloqueado'), 'Resumen: muestra el nivel desbloqueado');
   await pulsar('volver-inicio');
   await esperar('tarjeta-continuar');
   ok((await estado('senales-1')).startsWith('Completado'), 'Inicio: nivel 1 completado');
   ok((await estado('senales-2')) === 'Empezar', 'Inicio: nivel 2 desbloqueado');
+  ok(await cocheAntesDe('senales-2'), 'Coche: tras completar un nivel avanza hasta el siguiente');
+  await vis('nivel-senales-2').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: FOTOS + 'coche.png' });
 
   // Repaso: acertar → Corregidas
   await pulsar('abrir-errores');
@@ -178,7 +204,6 @@ async (pagina, log) => {
   await esperar('practicar-tema');
 
   // Catálogo de señales
-  const FOTOS = '/projects/sandbox/.kiro/artifacts/screenshots/';
   await page.screenshot({ path: FOTOS + 'capitulo-senales-banner.png' });
   await pulsar('abrir-catalogo');
   await esperar('pantalla-catalogo');
@@ -210,6 +235,7 @@ async (pagina, log) => {
   // Nivel no superado
   await sesion([0, 1, 2, 3]);
   ok((await vis('resumen-titulo').innerText()) === 'Nivel no superado', 'Nivel con 4 fallos: no superado');
+  ok((await id('confeti').count()) === 0, 'Nivel no superado: sin confeti');
   await pulsar('volver-inicio');
   await esperar('tarjeta-continuar');
   ok((await estado('senales-2')) === 'Empezar', 'Nivel no superado: sigue disponible');

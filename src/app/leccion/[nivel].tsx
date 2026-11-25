@@ -6,6 +6,7 @@ import { getNivel, niveles, REGLAS, tituloNivel, type Nivel } from '@/content';
 import { nivelQueFalta } from '@/domain/niveles';
 import { useDatos } from '@/store/useDatos';
 import { Boton, Cabecera, EstadoVacio, Icono, Pantalla, Tarjeta } from '@/ui/componentes';
+import { Confeti } from '@/ui/Confeti';
 import { SesionPractica, type ResultadoSesion } from '@/ui/SesionPractica';
 import { colores, espacio, texto } from '@/ui/tema';
 
@@ -46,14 +47,18 @@ export default function Leccion() {
   };
 
   return (
-    <SesionPractica
-      key={nivel.id}
-      titulo={tituloNivel(nivel)}
-      preguntas={nivel.preguntas}
-      origen="leccion"
-      onTerminar={onTerminar}
-      renderResumen={(r) => <Resumen nivel={nivel} resultado={r} superado={!!cierre?.superado} desbloqueado={cierre?.desbloqueado} />}
-    />
+    <View style={{ flex: 1 }}>
+      <SesionPractica
+        key={nivel.id}
+        titulo={tituloNivel(nivel)}
+        preguntas={nivel.preguntas}
+        origen="leccion"
+        onTerminar={onTerminar}
+        renderResumen={(r) => <Resumen nivel={nivel} resultado={r} superado={!!cierre?.superado} desbloqueado={cierre?.desbloqueado} />}
+      />
+      {/* Celebración al completar el nivel */}
+      {cierre?.superado ? <Confeti /> : null}
+    </View>
   );
 }
 
