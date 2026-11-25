@@ -12,7 +12,8 @@ export const ETIQUETA_DEMO = 'Demo · pendiente de revisión';
 export const REGLAS = {
   maxFallosNivel: 3,
   segundosPorPregunta: 40,
-  simulacro: { preguntas: 6, segundos: 180, maxFallos: 1 },
+  /** 30 preguntas con 3 fallos como máximo; se mantiene el ritmo anterior de 30 s por pregunta. */
+  simulacro: { preguntas: 30, segundos: 900, maxFallos: 3 },
 } as const;
 
 /** Todos los niveles en el orden del camino. */

@@ -45,7 +45,7 @@ src/
 
 ## Contenido de demostración
 
-Todas las preguntas y los textos del temario son de demostración y están pendientes de revisión. No proceden de fuentes oficiales ni reproducen el formato del examen de la DGT. El simulacro (6 preguntas, 3 minutos, 1 fallo como máximo) es solo una demostración.
+Todas las preguntas y los textos del temario son de demostración y están pendientes de revisión. No proceden de fuentes oficiales ni reproducen el formato del examen de la DGT. El simulacro (30 preguntas, 15 minutos, 3 fallos como máximo) es solo una demostración.
 
 ## Catálogo de señales
 

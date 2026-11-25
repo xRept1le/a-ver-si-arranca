@@ -24,11 +24,11 @@ export default function Simulador() {
       </View>
 
       <Tarjeta>
-        <Text style={texto.subtitulo}>Simulacro corto</Text>
+        <Text style={texto.subtitulo}>Simulacro</Text>
         {[
           { icono: 'help-circle-outline' as const, t: `${preguntas} preguntas de tres opciones` },
           { icono: 'timer-outline' as const, t: `${formatoTiempo(segundos)} minutos en total` },
-          { icono: 'checkmark-done-outline' as const, t: `Apto con ${maxFallos} fallo como máximo` },
+          { icono: 'checkmark-done-outline' as const, t: `Apto con ${maxFallos} ${(maxFallos as number) === 1 ? 'fallo' : 'fallos'} como máximo` },
           { icono: 'swap-horizontal-outline' as const, t: 'Puedes cambiar respuestas antes de entregar' },
           { icono: 'alarm-outline' as const, t: 'Se corrige al entregar o al agotarse el tiempo' },
         ].map((f) => (

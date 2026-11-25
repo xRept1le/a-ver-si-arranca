@@ -1,61 +1,36 @@
 import { router } from 'expo-router';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Defs, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import { camino, esPrevisto, niveles, tituloNivel, type Nivel, type NivelPrevisto, type TramoCamino } from '@/content';
 import { estadosNiveles, nivelActual, nivelQueFalta, type EstadoNivel } from '@/domain/niveles';
 import { useDatos } from '@/store/useDatos';
-import { Dialogo, Icono, type NombreIcono } from './componentes';
-import {
-  Arbol,
-  ArbolCiudad,
-  Arbusto,
-  azar,
-  Casa,
-  Ciervo,
-  Conejo,
-  Edificio,
-  EntradaPoblado,
-  Farola,
-  Fardo,
-  Flores,
-  Hierba,
-  Meta,
-  Molino,
-  Oveja,
-  PAISAJE,
-  Pajaros,
-  PasoPeatones,
-  Pino,
-  Semaforo,
-  Valla,
-  Vaca,
-} from './Paisaje';
-import { colores, espacio, radio, texto } from './tema';
+import { Dialogo, Icono } from './componentes';
+import { azar, componerPaisaje, EntradaPoblado, Meta, PAISAJE, PasoPeatones, PiezaPaisaje } from './Paisaje';
+import { colores, radio } from './tema';
 
-const NODO = 60;
-const NODO_ACTUAL = 72;
+const NODO = 58;
+const NODO_ACTUAL = 70;
 /** Altura de cada elemento del camino. */
-const ALTO = { cartel: 140, nivel: 150, entrada: 120, meta: 120 } as const;
-/** Ancho de la calzada en el campo y en la ciudad. */
-const CALZADA = { campo: 60, ciudad: 70 } as const;
+const ALTO = { cartel: 96, nivel: 118, entrada: 96, meta: 90 } as const;
+/** Medio ancho de la calzada y de lo que ocupa con arcén o acera. */
+const CALZADA = { campo: 54, ciudad: 64 } as const;
+const OCUPA = { campo: CALZADA.campo / 2 + 7, ciudad: CALZADA.ciudad / 2 + 15 } as const;
 /** Los dos últimos tramos discurren por ciudad. */
 const PRIMER_TRAMO_CIUDAD = Math.max(0, camino.length - 2);
+const CARACTER = ['prado', 'bosque', 'cultivo'] as const;
+const CARTEL = { ancho: 150, alto: 52 } as const;
+const ENSANCHE = 30;
+
+/** Trapecio centrado en `x` que pasa de ancho `w0` (arriba) a `w1` (abajo). */
+const trapecio = (x: number, y: number, w0: number, w1: number) =>
+  `M${x - w0 / 2},${y}L${x + w0 / 2},${y}L${x + w1 / 2},${y + ENSANCHE}L${x - w1 / 2},${y + ENSANCHE}Z`;
 
 type EstadoCamino = EstadoNivel | 'previsto';
-type Lado = 'izq' | 'der';
-type Entorno = 'campo' | 'ciudad';
-
-const ICONO: Record<EstadoCamino, NombreIcono> = {
-  completado: 'checkmark',
-  disponible: 'play',
-  bloqueado: 'lock-closed',
-  previsto: 'time-outline',
-};
 
 const TEXTO_ESTADO: Record<EstadoCamino, string> = {
-  completado: 'Completado · Repetir',
+  completado: 'Completado',
   disponible: 'Empezar',
   bloqueado: 'Bloqueado',
   previsto: 'Próximamente',
@@ -63,12 +38,12 @@ const TEXTO_ESTADO: Record<EstadoCamino, string> = {
 
 type Elemento =
   | { tipo: 'cartel'; y: number; tramo: TramoCamino; t: number }
-  | { tipo: 'nivel'; y: number; tramo: TramoCamino; t: number; nivel: Nivel | NivelPrevisto; lado: Lado; k: number }
+  | { tipo: 'nivel'; y: number; tramo: TramoCamino; t: number; nivel: Nivel | NivelPrevisto; k: number }
   | { tipo: 'entrada'; y: number }
   | { tipo: 'meta'; y: number };
+type ElementoNivel = Extract<Elemento, { tipo: 'nivel' }>;
 
-const alto = (e: Elemento) => ALTO[e.tipo];
-const centro = (e: Elemento) => e.y + alto(e) / 2;
+const centro = (e: Elemento) => e.y + ALTO[e.tipo] / 2;
 
 /** Coloca los elementos del camino de arriba abajo. */
 function trazar() {
@@ -83,7 +58,7 @@ function trazar() {
     elementos.push({ tipo: 'cartel', y, tramo, t });
     y += ALTO.cartel;
     for (const nivel of tramo.niveles) {
-      elementos.push({ tipo: 'nivel', y, tramo, t, nivel, lado: k % 2 === 0 ? 'izq' : 'der', k });
+      elementos.push({ tipo: 'nivel', y, tramo, t, nivel, k });
       y += ALTO.nivel;
       k++;
     }
@@ -93,89 +68,103 @@ function trazar() {
   return { elementos, total: y };
 }
 
-const entornoDe = (e: Elemento, yEntrada: number): Entorno => (e.y >= yEntrada ? 'ciudad' : 'campo');
-
-/** Tramo de curva entre dos puntos, con tangentes verticales en ambos extremos. */
+/** Curva entre dos puntos con tangentes verticales en ambos extremos. */
 function curva(a: { x: number; y: number }, b: { x: number; y: number }) {
   const m = (a.y + b.y) / 2;
   return `C${a.x},${m} ${b.x},${m} ${b.x},${b.y}`;
 }
 
-/** Decoración al lado exterior de un nivel, distinta según el tramo y el entorno. */
-function decoracion(e: Extract<Elemento, { tipo: 'nivel' }>, x: number, y: number, ancho: number, entorno: Entorno): ReactNode {
-  const fuera = e.lado === 'izq' ? -1 : 1;
-  const borde = x + fuera * (CALZADA[entorno] / 2 + 6);
-  const hueco = e.lado === 'izq' ? borde : ancho - borde;
-  const cx = e.lado === 'izq' ? borde / 2 : borde + hueco / 2;
-  const mira = (fuera * -1) as 1 | -1;
-  const r = azar(e.k + 1);
-
-  if (entorno === 'ciudad') {
-    const w1 = Math.min(34, hueco / 2 - 4);
-    const w2 = Math.min(30, hueco / 2 - 6);
-    const xa = cx - fuera * (w1 / 2 + 2);
-    const xb = cx + fuera * (w2 / 2 + 2);
-    const base = y + 58;
-    return (
-      <G key={`d${e.k}`}>
-        <Edificio x={xb} y={base - 4} w={w2} h={70 + Math.round(r * 40)} semilla={e.k * 3 + 1} />
-        <Edificio x={xa} y={base} w={w1} h={90 + Math.round(azar(e.k + 9) * 50)} semilla={e.k * 3} />
-        <Farola x={x + fuera * (CALZADA.ciudad / 2 + 10)} y={y + 30} v={mira} />
-        {e.k % 3 === 1 ? <Semaforo x={x + fuera * (CALZADA.ciudad / 2 + 10)} y={y - 30} /> : null}
-        {e.k % 3 === 2 ? <ArbolCiudad x={x + fuera * (CALZADA.ciudad / 2 + 12)} y={y - 34} /> : null}
-      </G>
-    );
-  }
-
-  // Campo: prado con ganado, bosque y campos de cultivo, según el tramo.
-  const variante = e.t % 3;
-  const principal =
-    variante === 0
-      ? [<Oveja key="a" x={cx} y={y + 16} s={1.25} v={mira} />, <Vaca key="b" x={cx} y={y + 16} s={1.1} v={mira} />][e.k % 2]
-      : variante === 1
-        ? [<Ciervo key="a" x={cx} y={y + 20} s={1.1} v={mira} />, <Pino key="b" x={cx} y={y + 24} s={1.1} />][e.k % 2]
-        : [<Molino key="a" x={cx} y={y + 24} s={1.1} />, <Fardo key="b" x={cx} y={y + 16} s={1.3} />][e.k % 2];
-  const secundaria =
-    variante === 0
-      ? [<Flores key="c" x={cx + 10} y={y + 64} />, <Valla key="c" x={cx} y={y + 66} s={0.9} />][e.k % 2]
-      : variante === 1
-        ? [<Conejo key="c" x={cx - 8} y={y + 66} v={mira} />, <Arbusto key="c" x={cx + 6} y={y + 64} />][e.k % 2]
-        : [<Fardo key="c" x={cx + 12} y={y + 66} s={0.8} />, <Oveja key="c" x={cx} y={y + 66} s={0.8} v={mira} />][e.k % 2];
-  const extra =
-    r > 0.5 ? <Pajaros x={cx} y={y - 48} /> : variante === 1 ? <Pino x={cx + 14} y={y - 34} s={0.7} /> : <Arbol x={cx - 6} y={y - 30} s={0.6} />;
-  return (
-    <G key={`d${e.k}`}>
-      {extra}
-      {principal}
-      {secundaria}
-    </G>
-  );
-}
-
-/** Camino de niveles con forma de carretera: campo al principio y ciudad en los últimos tramos. */
+/**
+ * Camino de niveles con forma de carretera. Los niveles son los protagonistas: el paisaje,
+ * en tonos apagados, se reparte alrededor sin patrones fijos y el texto se limita al nivel actual.
+ */
 export function CaminoNiveles() {
   const { width: anchoVentana } = useWindowDimensions();
   const [ancho, setAncho] = useState(0);
-  const W = ancho || anchoVentana;
+  const W = Math.round(ancho || anchoVentana);
   const completados = useDatos((s) => s.completados);
   const estados = estadosNiveles(niveles, completados);
   const actual = nivelActual(niveles, completados);
   const [aviso, setAviso] = useState<{ tipo: 'bloqueado'; nivel: Nivel; falta?: Nivel } | { tipo: 'previsto'; tramo: TramoCamino } | null>(null);
 
   const { elementos, total } = useMemo(trazar, []);
-  const yEntrada = elementos.find((e) => e.tipo === 'entrada')?.y ?? total;
+  const yCiudad = elementos.find((e) => e.tipo === 'entrada')?.y ?? total;
 
-  const xDe = (e: Elemento) => (e.tipo === 'nivel' ? (e.lado === 'izq' ? 0.3 : 0.7) * W : W / 2);
-  const puntos = [{ x: W / 2, y: 0 }, ...elementos.map((e) => ({ x: xDe(e), y: centro(e) })), { x: W / 2, y: total }];
+  // Geometría y paisaje: solo dependen del ancho.
+  const escena = useMemo(() => {
+    // Zigzag con amplitud algo irregular para que no parezca dibujado con plantilla.
+    const xDe = (e: Elemento) => {
+      if (e.tipo !== 'nivel') return W / 2;
+      const amplitud = 0.17 + azar(e.k * 3 + 2) * 0.06;
+      return W * (0.5 + (e.k % 2 === 0 ? -amplitud : amplitud));
+    };
+    const puntos = [{ x: W / 2, y: 0 }, ...elementos.map((e) => ({ x: xDe(e), y: centro(e) })), { x: W / 2, y: total }];
+
+    // Carteles junto a la calzada, alternando lado.
+    const carteles = elementos.flatMap((e) => {
+      if (e.tipo !== 'cartel') return [];
+      const izq = e.t % 2 === 0;
+      const x = izq ? W / 2 - OCUPA.campo - 14 - CARTEL.ancho : W / 2 + OCUPA.campo + 14;
+      return [{ e, x, y: centro(e) - CARTEL.alto / 2 - 10 }];
+    });
+
+    const reservas = [
+      // Alrededor de cada nivel, incluida la pastilla del nivel actual.
+      ...elementos.flatMap((e, i) =>
+        e.tipo === 'nivel' ? [{ x0: puntos[i + 1].x - 56, y0: puntos[i + 1].y - 50, x1: puntos[i + 1].x + 56, y1: puntos[i + 1].y + 70 }] : [],
+      ),
+      ...carteles.map((c) => ({ x0: c.x - 6, y0: c.y - 6, x1: c.x + CARTEL.ancho + 6, y1: c.y + CARTEL.alto + 34 })),
+      ...elementos
+        .filter((e) => e.tipo === 'entrada' || e.tipo === 'meta')
+        .map((e) => ({ x0: 0, y0: e.y, x1: W, y1: e.y + ALTO[e.tipo] })),
+    ];
+    const tramos = elementos.flatMap((e, i) => {
+      if (e.tipo !== 'cartel') return [];
+      const siguiente = elementos.slice(i + 1).find((s) => s.tipo !== 'nivel');
+      return [{ y0: e.y, y1: siguiente?.y ?? total, caracter: CARACTER[e.t % 3] }];
+    });
+    const piezas = componerPaisaje({ ancho: W, alto: total, yCiudad, puntos, medio: OCUPA, reservas, tramos });
+
+    // Trazado de la calzada, separado en campo y ciudad. Al entrar en la ciudad la calzada
+    // se ensancha de forma gradual en un tramo recto de ENSANCHE px.
+    const trazado = { campo: '', ciudad: '' };
+    let yEnsanche: number | undefined;
+    for (let i = 0; i < puntos.length - 1; i++) {
+      const a = puntos[i];
+      const b = puntos[i + 1];
+      if (a.y < yCiudad) {
+        if (!trazado.campo) trazado.campo = `M${a.x},${a.y}`;
+        trazado.campo += curva(a, b);
+      } else if (!trazado.ciudad) {
+        yEnsanche = a.y;
+        trazado.ciudad = `M${a.x},${a.y + ENSANCHE}L${b.x},${b.y}`;
+      } else {
+        trazado.ciudad += curva(a, b);
+      }
+    }
+
+    // Un paso de peatones por tramo de ciudad, en mitad de su primera curva.
+    const pasos = elementos.flatMap((e, i) => {
+      if (e.tipo !== 'cartel' || e.y < yCiudad) return [];
+      const a = puntos[i + 2];
+      const b = puntos[i + 3];
+      if (!a || !b) return [];
+      const grados = (Math.atan2(0.75 * (b.y - a.y), 1.5 * (b.x - a.x)) * 180) / Math.PI;
+      return [{ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, grados }];
+    });
+
+    return { puntos, carteles, piezas, trazado, pasos, yEnsanche };
+  }, [W, elementos, total, yCiudad]);
+
+  const { puntos } = escena;
   const indiceActual = actual ? elementos.findIndex((e) => e.tipo === 'nivel' && e.nivel.id === actual.id) + 1 : puntos.length;
-  // La parte recorrida empieza en el primer tramo con preguntas: los previstos no se han hecho.
+  // Lo recorrido empieza en el primer tramo con preguntas: los previstos no se han hecho.
   const inicioRecorrido = elementos.findIndex((e) => e.tipo === 'cartel' && !esPrevisto(e.tramo)) + 1;
   const recorrido = (fin: number) => fin > inicioRecorrido && fin <= indiceActual;
 
-  const estadoDe = (e: Extract<Elemento, { tipo: 'nivel' }>): EstadoCamino =>
-    esPrevisto(e.tramo) ? 'previsto' : estados[e.nivel.id];
+  const estadoDe = (e: ElementoNivel): EstadoCamino => (esPrevisto(e.tramo) ? 'previsto' : estados[e.nivel.id]);
 
-  const pulsar = (e: Extract<Elemento, { tipo: 'nivel' }>) => {
+  const pulsar = (e: ElementoNivel) => {
     if (esPrevisto(e.tramo)) {
       setAviso({ tipo: 'previsto', tramo: e.tramo });
       return;
@@ -188,37 +177,8 @@ export function CaminoNiveles() {
     router.push({ pathname: '/leccion/[nivel]', params: { nivel: nivel.id } });
   };
 
-  // Calzada: un trazado para el campo y otro para la ciudad.
-  const trazado = { campo: '', ciudad: '' };
-  for (let i = 0; i < puntos.length - 1; i++) {
-    const entorno: Entorno = puntos[i].y >= yEntrada ? 'ciudad' : 'campo';
-    if (!trazado[entorno]) trazado[entorno] = `M${puntos[i].x},${puntos[i].y}`;
-    trazado[entorno] += curva(puntos[i], puntos[i + 1]);
-  }
-
-  // Hierba repartida por el campo (la calzada la tapa al pintarse encima).
-  const hierba: ReactNode[] = [];
-  for (let i = 0; i < Math.floor(yEntrada / 26); i++) {
-    hierba.push(<Hierba key={i} x={azar(i * 2 + 0.5) * W} y={azar(i * 3 + 0.25) * yEntrada} />);
-  }
-
-  // Pasos de peatones en la mitad de algunos tramos de ciudad.
-  const pasos: ReactNode[] = [];
-  for (let i = 1; i < puntos.length - 2; i++) {
-    const a = puntos[i];
-    const b = puntos[i + 1];
-    const e = elementos[i - 1];
-    if (a.y < yEntrada || e.tipo !== 'nivel' || e.k % 2 === 1) continue;
-    const grados = (Math.atan2(0.75 * (b.y - a.y), 1.5 * (b.x - a.x)) * 180) / Math.PI;
-    pasos.push(<PasoPeatones key={i} x={(a.x + b.x) / 2} y={(a.y + b.y) / 2} grados={grados} ancho={CALZADA.ciudad - 10} />);
-  }
-
   return (
-    <View
-      testID="camino"
-      style={[styles.camino, { height: total }]}
-      onLayout={(ev) => setAncho(ev.nativeEvent.layout.width)}
-    >
+    <View testID="camino" style={[styles.camino, { height: total }]} onLayout={(ev) => setAncho(ev.nativeEvent.layout.width)}>
       <View style={StyleSheet.absoluteFill} pointerEvents="none" importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
         <Svg width={W} height={total}>
           <Defs>
@@ -226,98 +186,97 @@ export function CaminoNiveles() {
               <Stop offset="0" stopColor={colores.fondo} stopOpacity={1} />
               <Stop offset="1" stopColor={colores.fondo} stopOpacity={0} />
             </LinearGradient>
+            <LinearGradient id="transicion" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={PAISAJE.campo} stopOpacity={1} />
+              <Stop offset="1" stopColor={PAISAJE.ciudad} stopOpacity={1} />
+            </LinearGradient>
           </Defs>
-          <Rect x={0} y={0} width={W} height={yEntrada} fill={PAISAJE.campo} />
-          <Rect x={0} y={yEntrada} width={W} height={total - yEntrada} fill={PAISAJE.ciudad} />
-          {hierba}
-
-          {/* Decoración exterior de cada nivel */}
-          {elementos.map((e, i) =>
-            e.tipo === 'nivel' ? decoracion(e, puntos[i + 1].x, puntos[i + 1].y, W, entornoDe(e, yEntrada)) : null,
-          )}
+          <Rect x={0} y={0} width={W} height={yCiudad} fill={PAISAJE.campo} />
+          <Rect x={0} y={yCiudad} width={W} height={total - yCiudad} fill={PAISAJE.ciudad} />
+          <Rect x={0} y={yCiudad - 60} width={W} height={120} fill="url(#transicion)" />
 
           {/* Calzada */}
-          {trazado.campo ? (
+          {escena.trazado.campo ? (
             <G>
-              <Path d={trazado.campo} stroke={PAISAJE.arcen} strokeWidth={CALZADA.campo + 14} fill="none" />
-              <Path d={trazado.campo} stroke={PAISAJE.lineaBorde} strokeWidth={CALZADA.campo + 4} fill="none" />
-              <Path d={trazado.campo} stroke={PAISAJE.asfalto} strokeWidth={CALZADA.campo} fill="none" />
+              <Path d={escena.trazado.campo} stroke={PAISAJE.arcen} strokeWidth={CALZADA.campo + 14} fill="none" />
+              <Path d={escena.trazado.campo} stroke={PAISAJE.lineaBorde} strokeOpacity={0.55} strokeWidth={CALZADA.campo + 3} fill="none" />
+              <Path d={escena.trazado.campo} stroke={PAISAJE.asfalto} strokeWidth={CALZADA.campo} fill="none" />
             </G>
           ) : null}
-          {trazado.ciudad ? (
+          {escena.trazado.ciudad ? (
             <G>
-              <Path d={trazado.ciudad} stroke={PAISAJE.acera} strokeWidth={CALZADA.ciudad + 30} fill="none" />
-              <Path d={trazado.ciudad} stroke={PAISAJE.bordillo} strokeWidth={CALZADA.ciudad + 6} fill="none" />
-              <Path d={trazado.ciudad} stroke={PAISAJE.asfaltoCiudad} strokeWidth={CALZADA.ciudad} fill="none" />
+              <Path d={escena.trazado.ciudad} stroke={PAISAJE.acera} strokeWidth={CALZADA.ciudad + 30} fill="none" />
+              <Path d={escena.trazado.ciudad} stroke={PAISAJE.bordillo} strokeWidth={CALZADA.ciudad + 4} fill="none" />
+              <Path d={escena.trazado.ciudad} stroke={PAISAJE.asfaltoCiudad} strokeWidth={CALZADA.ciudad} fill="none" />
             </G>
           ) : null}
-          {pasos}
+          {escena.yEnsanche !== undefined ? (
+            <G>
+              <Path d={trapecio(W / 2, escena.yEnsanche, CALZADA.campo + 14, CALZADA.ciudad + 30)} fill={PAISAJE.acera} />
+              <Path d={trapecio(W / 2, escena.yEnsanche, CALZADA.campo + 3, CALZADA.ciudad + 4)} fill={PAISAJE.bordillo} />
+              <Path d={trapecio(W / 2, escena.yEnsanche, CALZADA.campo, CALZADA.ciudad)} fill={PAISAJE.asfaltoCiudad} />
+            </G>
+          ) : null}
+          {escena.pasos.map((p, i) => (
+            <PasoPeatones key={`pp${i}`} x={p.x} y={p.y} grados={p.grados} ancho={CALZADA.ciudad - 10} />
+          ))}
 
-          {/* Línea central: azul en la parte del camino ya recorrida */}
+          {/* Línea central: azul en la parte ya recorrida */}
           {puntos.slice(0, -1).map((p, i) => (
             <Path
               key={`l${i}`}
               d={`M${p.x},${p.y}${curva(p, puntos[i + 1])}`}
               stroke={recorrido(i + 1) ? colores.acento : PAISAJE.lineaCentral}
-              strokeOpacity={recorrido(i + 1) ? 1 : 0.7}
-              strokeWidth={3}
-              strokeDasharray="14 12"
+              strokeOpacity={recorrido(i + 1) ? 1 : 0.45}
+              strokeWidth={recorrido(i + 1) ? 3 : 2}
+              strokeDasharray="12 12"
               fill="none"
             />
           ))}
 
-          {/* Pórticos de los carteles de tramo */}
-          {elementos.map((e) =>
-            e.tipo === 'cartel' ? (
-              <G key={`p${e.t}`}>
-                <Rect x={W / 2 - 150} y={centro(e) - 8} width={6} height={56} fill={PAISAJE.farola} />
-                <Rect x={W / 2 + 144} y={centro(e) - 8} width={6} height={56} fill={PAISAJE.farola} />
-              </G>
-            ) : null,
-          )}
+          {/* Paisaje, ordenado por profundidad */}
+          {escena.piezas.map((p, i) => (
+            <PiezaPaisaje key={`z${i}`} p={p} />
+          ))}
+
+          {/* Postes de los carteles de tramo */}
+          {escena.carteles.map(({ e, x, y }) => (
+            <G key={`poste${e.t}`}>
+              <Rect x={x + 22} y={y + CARTEL.alto - 2} width={3} height={30} fill={PAISAJE.farola} />
+              <Rect x={x + CARTEL.ancho - 25} y={y + CARTEL.alto - 2} width={3} height={30} fill={PAISAJE.farola} />
+            </G>
+          ))}
 
           {elementos.map((e) =>
             e.tipo === 'entrada' ? (
-              <G key="entrada">
-                <EntradaPoblado x={W / 2 - CALZADA.ciudad / 2 - 60} y={centro(e) + 36} nombre="CIUDAD" />
-                <Casa x={W / 2 + CALZADA.ciudad / 2 + 52} y={centro(e) + 30} s={1.2} />
-                <Arbol x={W / 2 + CALZADA.ciudad / 2 + 100} y={e.y + 30} s={0.8} />
-                <Farola x={W / 2 + CALZADA.ciudad / 2 + 18} y={centro(e) + 46} v={-1} />
-              </G>
+              <EntradaPoblado key="entrada" x={W / 2 - OCUPA.ciudad - 44} y={centro(e) + 34} nombre="CIUDAD" />
             ) : e.tipo === 'meta' ? (
-              <G key="meta">
-                <Meta x={W / 2} y={centro(e) - 4} w={CALZADA.ciudad} />
-                <Edificio x={W / 2 - 120} y={e.y + ALTO.meta} w={44} h={100} semilla={7} />
-                <Edificio x={W / 2 + 118} y={e.y + ALTO.meta} w={40} h={84} semilla={8} />
-              </G>
+              <Meta key="meta" x={W / 2} y={centro(e)} w={CALZADA.ciudad} />
             ) : null,
           )}
-          <Rect x={0} y={0} width={W} height={40} fill="url(#fundido)" />
+          <Rect x={0} y={0} width={W} height={36} fill="url(#fundido)" />
         </Svg>
       </View>
 
-      {/* Carteles de tramo, como señales de orientación sobre la calzada */}
-      {elementos.map((e) =>
-        e.tipo === 'cartel' ? (
+      {/* Carteles de tramo: pequeñas señales de orientación junto a la calzada */}
+      {escena.carteles.map(({ e, x, y }) => {
+        const previsto = esPrevisto(e.tramo);
+        return (
           <View
             key={`c${e.t}`}
-            style={[styles.cartel, { top: centro(e) - 40, left: W / 2 - 150, width: 300 }]}
+            style={[styles.cartel, { left: x, top: y, width: CARTEL.ancho, minHeight: CARTEL.alto }, previsto && styles.cartelPrevisto]}
             testID={`tramo-${e.tramo.id}`}
+            accessible
             accessibilityRole="header"
+            accessibilityLabel={`Tramo ${e.t + 1}: ${e.tramo.titulo}${previsto ? '. Próximamente' : ''}`}
           >
-            <Text style={styles.cartelTramo}>{`Tramo ${e.t + 1}`}</Text>
-            <Text style={styles.cartelTitulo} numberOfLines={2}>
+            <Text style={[styles.cartelNumero, previsto && { color: colores.textoSuave, borderColor: colores.textoSuave }]}>{e.t + 1}</Text>
+            <Text style={[styles.cartelTitulo, previsto && { color: colores.textoSuave }]} numberOfLines={2}>
               {e.tramo.titulo}
             </Text>
-            {esPrevisto(e.tramo) ? <Text style={styles.cartelProximamente}>Próximamente</Text> : null}
           </View>
-        ) : e.tipo === 'meta' ? (
-          <View key="meta" style={[styles.meta, { top: centro(e) + 16 }]}>
-            <Icono nombre="flag" color={colores.texto} tam={18} />
-            <Text style={[texto.suave, { color: colores.texto }]}>Fin del camino de la demo</Text>
-          </View>
-        ) : null,
-      )}
+        );
+      })}
 
       {/* Niveles */}
       {elementos.map((e, i) => {
@@ -327,49 +286,41 @@ export function CaminoNiveles() {
         const esActual = actual?.id === e.nivel.id;
         const tam = esActual ? NODO_ACTUAL : NODO;
         const previsto = estado === 'previsto';
-        const titulo = previsto ? `Nivel ${e.nivel.numero}` : `Nivel ${e.nivel.numero} · ${(e.nivel as Nivel).titulo}`;
-        const detalle = previsto ? 'Preguntas en preparación' : `${(e.nivel as Nivel).preguntas.length} preguntas`;
-        const izq = e.lado === 'izq';
-        const posicion = izq ? { left: p.x - tam / 2, right: espacio.m } : { left: espacio.m, right: W - (p.x + tam / 2) };
+        const nombre = previsto ? `Nivel ${e.nivel.numero}` : `${tituloNivel(e.nivel as Nivel)}, ${(e.nivel as Nivel).titulo}`;
         return (
-          <Pressable
-            key={e.nivel.id}
-            accessibilityRole="button"
-            accessibilityLabel={`Tramo ${e.t + 1}, ${e.tramo.titulo}. ${titulo}. ${TEXTO_ESTADO[estado]}`}
-            accessibilityState={{ disabled: estado === 'bloqueado' || previsto }}
-            testID={`nivel-${e.nivel.id}`}
-            onPress={() => pulsar(e)}
-            style={[styles.fila, posicion, { top: p.y - 44, flexDirection: izq ? 'row' : 'row-reverse' }]}
-          >
-            <View
-              style={[
+          <View key={e.nivel.id} style={[styles.ancla, { left: p.x - 60, top: p.y - tam / 2 }]} pointerEvents="box-none">
+            {esActual ? <View style={[styles.halo, { width: tam + 18, height: tam + 18, borderRadius: (tam + 18) / 2, top: -9 }]} /> : null}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Tramo ${e.t + 1}. ${nombre}. ${TEXTO_ESTADO[estado]}`}
+              accessibilityState={{ disabled: estado === 'bloqueado' || previsto }}
+              testID={`nivel-${e.nivel.id}`}
+              onPress={() => pulsar(e)}
+              hitSlop={6}
+              style={({ pressed }) => [
                 styles.nodo,
                 { width: tam, height: tam, borderRadius: tam / 2 },
                 estado === 'completado' && styles.nodoCompletado,
-                esActual && styles.nodoActual,
                 estado === 'bloqueado' && styles.nodoBloqueado,
                 previsto && styles.nodoPrevisto,
+                esActual && styles.nodoActual,
+                pressed && { transform: [{ scale: 0.96 }] },
               ]}
             >
-              <Icono
-                nombre={ICONO[estado]}
-                tam={esActual ? 30 : 24}
-                color={esActual ? colores.sobreAcento : estado === 'bloqueado' || previsto ? colores.textoTenue : colores.texto}
-              />
-            </View>
-            <View style={[styles.etiqueta, { alignItems: izq ? 'flex-start' : 'flex-end' }]}>
-              <Text
-                style={[texto.cuerpo, styles.etiquetaTitulo, (estado === 'bloqueado' || previsto) && { color: colores.textoSuave }, !izq && { textAlign: 'right' }]}
-                numberOfLines={2}
-              >
-                {titulo}
-              </Text>
-              <Text style={[styles.estadoTexto, esActual && { color: colores.acento }, !izq && { textAlign: 'right' }]}>
-                <Text testID={`estado-${e.nivel.id}`}>{TEXTO_ESTADO[estado]}</Text>
-                <Text style={styles.detalle}>{` · ${detalle}`}</Text>
-              </Text>
-            </View>
-          </Pressable>
+              {esActual ? (
+                <Icono nombre="play" tam={30} color={colores.sobreAcento} />
+              ) : estado === 'completado' ? (
+                <Icono nombre="checkmark" tam={26} color={colores.acierto} />
+              ) : (
+                <Text style={[styles.numero, previsto && { color: colores.textoTenue }]}>{e.nivel.numero}</Text>
+              )}
+            </Pressable>
+            {esActual ? (
+              <View style={styles.pastilla} pointerEvents="none">
+                <Text style={styles.pastillaTexto}>{TEXTO_ESTADO[estado]}</Text>
+              </View>
+            ) : null}
+          </View>
         );
       })}
 
@@ -405,55 +356,58 @@ export function CaminoNiveles() {
 }
 
 const styles = StyleSheet.create({
-  camino: { marginHorizontal: -espacio.l, overflow: 'hidden' },
+  camino: { marginHorizontal: -16, overflow: 'hidden' },
   cartel: {
     position: 'absolute',
-    minHeight: 64,
-    paddingHorizontal: espacio.m,
-    paddingVertical: espacio.s,
-    borderRadius: radio.s,
-    backgroundColor: colores.acentoRelleno,
-    borderWidth: 2,
-    borderColor: colores.texto,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: colores.acentoRelleno,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.85)',
   },
-  cartelTramo: { fontSize: 11, fontWeight: '800', letterSpacing: 1.2, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase' },
-  cartelTitulo: { fontSize: 18, fontWeight: '800', color: colores.sobreAcento, textAlign: 'center' },
-  cartelProximamente: {
-    marginTop: 2,
-    fontSize: 11,
+  cartelPrevisto: { backgroundColor: colores.superficieAlta, borderColor: colores.borde },
+  cartelNumero: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.85)',
+    color: colores.sobreAcento,
+    fontSize: 13,
     fontWeight: '800',
-    color: colores.acentoRelleno,
-    backgroundColor: colores.texto,
-    paddingHorizontal: espacio.s,
-    paddingVertical: 1,
-    borderRadius: radio.total,
-    overflow: 'hidden',
+    textAlign: 'center',
+    lineHeight: 21,
   },
-  meta: { position: 'absolute', left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: espacio.xs },
-  fila: { position: 'absolute', height: 88, alignItems: 'center', gap: espacio.m },
+  cartelTitulo: { flex: 1, fontSize: 13, lineHeight: 17, fontWeight: '700', color: colores.sobreAcento },
+  ancla: { position: 'absolute', width: 120, alignItems: 'center' },
+  halo: { position: 'absolute', backgroundColor: colores.acento, opacity: 0.18 },
   nodo: {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colores.superficieAlta,
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: colores.bordeFuerte,
+    shadowColor: '#000',
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
   },
-  nodoCompletado: { borderColor: colores.acierto, backgroundColor: colores.superficie },
-  nodoActual: { backgroundColor: colores.acentoRelleno, borderColor: colores.acento, borderWidth: 4 },
-  nodoBloqueado: { borderWidth: 2, borderColor: colores.bordeFuerte, backgroundColor: colores.fondo },
-  nodoPrevisto: { borderWidth: 2, borderColor: colores.borde, backgroundColor: colores.superficie },
-  etiqueta: {
-    flexShrink: 1,
-    gap: 2,
-    paddingHorizontal: espacio.s,
-    paddingVertical: 6,
-    borderRadius: radio.s,
-    backgroundColor: 'rgba(11,11,12,0.8)',
+  nodoCompletado: { borderColor: colores.acierto, borderWidth: 2.5, backgroundColor: colores.superficie },
+  nodoBloqueado: { backgroundColor: colores.superficie, borderColor: colores.bordeFuerte },
+  nodoPrevisto: { backgroundColor: colores.fondo, borderColor: colores.borde, elevation: 0, shadowOpacity: 0 },
+  nodoActual: { backgroundColor: colores.acentoRelleno, borderColor: colores.texto, borderWidth: 3 },
+  numero: { fontSize: 20, fontWeight: '800', color: colores.textoSuave },
+  pastilla: {
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: radio.total,
+    backgroundColor: colores.texto,
   },
-  etiquetaTitulo: { fontWeight: '700', fontSize: 15, lineHeight: 20 },
-  estadoTexto: { fontSize: 13, fontWeight: '700', color: colores.textoSuave },
-  detalle: { fontWeight: '400', color: colores.textoSuave },
+  pastillaTexto: { fontSize: 13, fontWeight: '800', color: colores.fondo },
 });

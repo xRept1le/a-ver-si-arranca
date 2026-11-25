@@ -17,6 +17,7 @@ Cada tarea indica los criterios de aceptación (CA) de `requirements.md` que cub
 - [x] 13. Instrucciones para abrir en Android con Expo Go (README).
 - [x] 14. Catálogo de señales del dosier: transcripción, recortes, contenido generado, índice, rejilla por tipo y ficha. Recorrido web ampliado a 51 comprobaciones. · CA3.4
 - [x] 15. Camino con forma de carretera (campo y ciudad), temas 1 y 2 previstos en el camino y banner destacado del catálogo en Temario y en el capítulo. Recorrido web con 55 comprobaciones. · CA2.2, CA2.6, CA3.4
+- [x] 16. Camino más limpio: paisaje compuesto sin repeticiones, texto mínimo, carteles junto a la calzada y transición gradual a la ciudad. Simulacro de 30 preguntas con 3 fallos como máximo. · CA2.2, R5
 
 ## Decisiones tomadas durante la implementación
 

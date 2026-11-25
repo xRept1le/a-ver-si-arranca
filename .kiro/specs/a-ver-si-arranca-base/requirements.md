@@ -3,7 +3,7 @@
 Estado: aprobada el 25-11-2026 con estas decisiones:
 - Un nivel tiene 15 preguntas (cambio del 25-11-2026; antes 30) y se completa con 3 fallos como máximo.
 - Al corregir una pregunta de lección o repaso: la opción elegida se marca en verde si es correcta y en naranja si es incorrecta; la correcta se marca en verde. Siempre con icono y texto. Fuera de la corrección, el azul es el único acento.
-- Demo: 3 temas × 4 niveles; simulacro de 6 preguntas y 3 minutos (máximo 1 fallo).
+- Demo: 3 temas × 4 niveles; simulacro de 30 preguntas y 15 minutos (máximo 3 fallos).
 - Comprobación con `tsc`, Jest y recorrido web con Playwright; prueba en Android real a cargo del usuario.
 Plataforma: Android (Expo + React Native + TypeScript).
 Todo el contenido de preguntas y temario de esta fase es **de demostración, pendiente de revisión**.
@@ -49,7 +49,7 @@ Al comprobar se muestra: resultado (icono + texto «Correcto» / «Incorrecto»)
 
 **R2. Inicio.**
 - CA2.1 La tarjeta «Continuar» aparece en la primera vista sin desplazarse y muestra tema, nivel y duración estimada.
-- CA2.2 Debajo hay un camino vertical de niveles agrupados por tema con los tres estados de la tabla. El camino tiene forma de carretera con curvas: empieza en el campo, con animales y árboles a los lados, y los dos últimos tramos discurren por ciudad.
+- CA2.2 Debajo hay un camino vertical de niveles agrupados por tema con los tres estados de la tabla. El camino tiene forma de carretera con curvas: empieza en el campo y los dos últimos tramos discurren por ciudad. Los niveles son lo que destaca: el paisaje es discreto, sin patrones repetidos, y el único texto es el título de cada tramo y «Empezar» en el nivel actual.
 - CA2.3 Tocar un nivel completado o disponible abre su lección; uno bloqueado muestra qué nivel falta.
 - CA2.4 Hay acceso directo a Mis errores (con número de pendientes) e icono de Ajustes.
 - CA2.5 Si todos los niveles están completados, «Continuar» propone repasar errores o un simulacro.

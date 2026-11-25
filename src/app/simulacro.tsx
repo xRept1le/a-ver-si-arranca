@@ -1,6 +1,6 @@
 import { router, useNavigation, usePreventRemove } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from 'react-native';
 
 import { REGLAS, temas, type Pregunta } from '@/content';
 import { corregirSimulacro, formatoTiempo, generarSimulacro } from '@/domain/simulacro';
@@ -8,6 +8,9 @@ import { nuevoId, useDatos } from '@/store/useDatos';
 import { Boton, Cabecera, Dialogo, Icono, Pantalla } from '@/ui/componentes';
 import { PreguntaVista } from '@/ui/PreguntaVista';
 import { colores, espacio, radio, texto } from '@/ui/tema';
+
+/** Lado de cada casilla de la fila de preguntas (objetivo táctil mínimo). */
+const CELDA = 48;
 
 const { preguntas: NUM_PREGUNTAS, segundos: SEGUNDOS, maxFallos: MAX_FALLOS } = REGLAS.simulacro;
 
@@ -69,6 +72,12 @@ export default function Simulacro() {
     if (entregadoId) router.replace({ pathname: '/resultado/[id]', params: { id: entregadoId } });
   }, [entregadoId]);
 
+  // La fila de casillas se desplaza para que la pregunta actual quede a la vista.
+  const fila = useRef<ScrollViewInstance>(null);
+  useEffect(() => {
+    fila.current?.scrollTo({ x: Math.max(0, indice * (CELDA + espacio.s) - 2 * (CELDA + espacio.s)), animated: true });
+  }, [indice]);
+
   const pregunta = preguntas[indice];
   const sinResponder = preguntas.filter((p) => elecciones[p.id] === undefined).length;
   const poco = restante <= 30;
@@ -90,7 +99,13 @@ export default function Simulacro() {
               </View>
             }
           />
-          <View style={styles.rejilla} accessibilityLabel="Preguntas del simulacro">
+          <ScrollView
+            ref={fila}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.rejilla}
+            accessibilityLabel="Preguntas del simulacro"
+          >
             {preguntas.map((p, i) => {
               const respondida = elecciones[p.id] !== undefined;
               const actual = i === indice;
@@ -109,7 +124,7 @@ export default function Simulacro() {
                 </Pressable>
               );
             })}
-          </View>
+          </ScrollView>
         </View>
       }
       pie={
@@ -175,10 +190,10 @@ const styles = StyleSheet.create({
     borderColor: colores.borde,
   },
   relojTexto: { fontSize: 15, fontWeight: '700', color: colores.texto, fontVariant: ['tabular-nums'] },
-  rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, paddingHorizontal: espacio.l },
+  rejilla: { flexDirection: 'row', gap: espacio.s, paddingHorizontal: espacio.l },
   celda: {
-    width: 48,
-    height: 48,
+    width: CELDA,
+    height: CELDA,
     borderRadius: radio.s,
     borderWidth: 1,
     borderColor: colores.borde,

@@ -20,6 +20,9 @@ async (pagina, log) => {
   const esperar = (t, ms = 15000) => vis(t).waitFor({ state: 'visible', timeout: ms });
   const pulsar = (t) => vis(t).click();
   const atras = () => pulsar('boton-atras');
+  // El estado de cada nivel no se muestra como texto: va al final de su etiqueta accesible.
+  const estado = async (n) => (await vis('nivel-' + n).getAttribute('aria-label')).split('. ').pop();
+  const etiqueta = (t) => vis(t).getAttribute('aria-label');
   const errores = [];
   page.on('pageerror', (e) => errores.push(String(e)));
 
@@ -60,15 +63,15 @@ async (pagina, log) => {
   };
 
   // Estado inicial
-  ok((await vis('estado-senales-1').innerText()) === 'Empezar', 'Inicio: primer nivel disponible');
-  ok((await vis('estado-senales-2').innerText()) === 'Bloqueado', 'Inicio: segundo nivel bloqueado');
+  ok((await estado('senales-1')) === 'Empezar', 'Inicio: primer nivel disponible');
+  ok((await estado('senales-2')) === 'Bloqueado', 'Inicio: segundo nivel bloqueado');
   ok(
-    (await vis('tramo-conductor').innerText()).toLowerCase().includes('tramo 1') &&
-      (await vis('tramo-via').innerText()).toLowerCase().includes('tramo 2') &&
-      (await vis('tramo-senales').innerText()).toLowerCase().includes('tramo 3'),
+    (await etiqueta('tramo-conductor')).startsWith('Tramo 1') &&
+      (await etiqueta('tramo-via')).startsWith('Tramo 2') &&
+      (await etiqueta('tramo-senales')).startsWith('Tramo 3'),
     'Camino: los temas 1 y 2 van antes de Señales',
   );
-  ok((await vis('estado-conductor-1').innerText()) === 'Próximamente', 'Camino: los niveles de los temas 1 y 2 están en preparación');
+  ok((await estado('conductor-1')) === 'Próximamente', 'Camino: los niveles de los temas 1 y 2 están en preparación');
   await pulsar('nivel-via-2');
   await esperar('dialogo');
   ok((await vis('dialogo').innerText()).includes('Señales · Nivel 1'), 'Camino: un nivel en preparación remite al nivel disponible');
@@ -120,8 +123,8 @@ async (pagina, log) => {
   ok(await visible('desbloqueado'), 'Resumen: muestra el nivel desbloqueado');
   await pulsar('volver-inicio');
   await esperar('tarjeta-continuar');
-  ok((await vis('estado-senales-1').innerText()).startsWith('Completado'), 'Inicio: nivel 1 completado');
-  ok((await vis('estado-senales-2').innerText()) === 'Empezar', 'Inicio: nivel 2 desbloqueado');
+  ok((await estado('senales-1')).startsWith('Completado'), 'Inicio: nivel 1 completado');
+  ok((await estado('senales-2')) === 'Empezar', 'Inicio: nivel 2 desbloqueado');
 
   // Repaso: acertar → Corregidas
   await pulsar('abrir-errores');
@@ -152,7 +155,7 @@ async (pagina, log) => {
   await esperar('dialogo');
   await pulsar('dialogo-confirmar');
   await esperar('tarjeta-continuar');
-  ok((await vis('estado-senales-1').innerText()).startsWith('Completado'), 'Salir con confirmación; repetir no bloquea el nivel');
+  ok((await estado('senales-1')).startsWith('Completado'), 'Salir con confirmación; repetir no bloquea el nivel');
   await pulsar('abrir-errores');
   await esperar('lista-pendientes');
   ok(await visible('error-' + refallo), 'Corregida que se vuelve a fallar: regresa a Pendientes');
@@ -209,8 +212,8 @@ async (pagina, log) => {
   ok((await vis('resumen-titulo').innerText()) === 'Nivel no superado', 'Nivel con 4 fallos: no superado');
   await pulsar('volver-inicio');
   await esperar('tarjeta-continuar');
-  ok((await vis('estado-senales-2').innerText()) === 'Empezar', 'Nivel no superado: sigue disponible');
-  ok((await vis('estado-prioridad-1').innerText()) === 'Bloqueado', 'Nivel no superado: no desbloquea el siguiente');
+  ok((await estado('senales-2')) === 'Empezar', 'Nivel no superado: sigue disponible');
+  ok((await estado('prioridad-1')) === 'Bloqueado', 'Nivel no superado: no desbloquea el siguiente');
   await page.goto(ORIGEN + '/leccion/prioridad-1');
   await esperar('leccion-bloqueada', 20000);
   ok((await vis('leccion-bloqueada').innerText()).includes('Señales · Nivel 2'), 'Lección bloqueada abierta por URL: indica el nivel que falta');
@@ -223,9 +226,9 @@ async (pagina, log) => {
   await pulsar('empezar-simulacro');
   await esperar('pantalla-simulacro');
   ok(!(await visible('tab-inicio')), 'Simulacro: barra de pestañas oculta');
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 30; i++) {
     await pulsar('opcion-' + ((R[await preguntaId()] + 1) % 3));
-    if (i < 5) await pulsar('siguiente');
+    if (i < 29) await pulsar('siguiente');
   }
   await pulsar('ir-pregunta-0');
   const c0 = R[await preguntaId()];
@@ -235,7 +238,7 @@ async (pagina, log) => {
   await esperar('dialogo');
   await pulsar('dialogo-confirmar');
   await esperar('pantalla-resultado');
-  ok((await vis('resultado-cifras').innerText()).startsWith('1 de 6'), 'Simulacro entregado: corrige con la respuesta cambiada (1/6)');
+  ok((await vis('resultado-cifras').innerText()).startsWith('1 de 30'), 'Simulacro entregado: corrige con la respuesta cambiada (1/30)');
   ok(!(await visible('tiempo-agotado')), 'Simulacro entregado: no marca tiempo agotado');
 
   // Simulacro con tiempo agotado
@@ -244,10 +247,10 @@ async (pagina, log) => {
   await pulsar('empezar-simulacro');
   await esperar('pantalla-simulacro');
   await pulsar('opcion-' + R[await preguntaId()]);
-  await page.clock.fastForward('03:05');
+  await page.clock.fastForward('15:05');
   await esperar('tiempo-agotado');
   ok(await visible('tiempo-agotado'), 'Tiempo agotado: se corrige automáticamente');
-  ok((await vis('resultado-cifras').innerText()).startsWith('1 de 6'), 'Tiempo agotado: las no respondidas cuentan como fallo');
+  ok((await vis('resultado-cifras').innerText()).startsWith('1 de 30'), 'Tiempo agotado: las no respondidas cuentan como fallo');
 
   // Progreso
   await pulsar('ver-progreso');
