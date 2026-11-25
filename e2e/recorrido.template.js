@@ -1,0 +1,235 @@
+// Recorrido de la comprobación final sobre la versión web exportada (dist/).
+// No forma parte de la app. `node e2e/generar.js salida.js` sustituye
+// __RESPUESTAS__ por el mapa id → correcta de src/content/demo y el resultado
+// se ejecuta con la herramienta Playwright (browser_run_code), que sirve dist/
+// con page.route en el origen ficticio http://ava.test.
+async (pagina, log) => {
+  let page = await pagina.context().newPage();
+  await pagina.close({ runBeforeUnload: false });
+  await page.setViewportSize({ width: 412, height: 892 });
+  const R = __RESPUESTAS__;
+  const D = '/projects/sandbox/a-ver-si-arranca/dist';
+  const ORIGEN = 'http://ava.test';
+  const ok = (cond, msg) => {
+    if (!cond) throw new Error('FALLO: ' + msg);
+    log.push('✓ ' + msg);
+  };
+  const id = (t) => page.getByTestId(t);
+  const vis = (t) => page.locator(`[data-testid="${t}"]:visible`).last();
+  const visible = (t) => vis(t).isVisible();
+  const esperar = (t, ms = 15000) => vis(t).waitFor({ state: 'visible', timeout: ms });
+  const pulsar = (t) => vis(t).click();
+  const atras = () => pulsar('boton-atras');
+  const errores = [];
+  page.on('pageerror', (e) => errores.push(String(e)));
+
+  await page.context().unrouteAll({ behavior: 'ignoreErrors' });
+  await page.context().route(ORIGEN + '/**', async (route) => {
+    const p = decodeURIComponent(route.request().url().replace(ORIGEN, '').split('?')[0].split('#')[0]);
+    const archivo = /^\/(_expo|assets)\//.test(p) || /\.(ico|png|js|json|ttf|css|map)$/.test(p);
+    await route.fulfill({ path: D + (archivo ? p : '/index.html') });
+  });
+  await page.clock.install();
+  await page.goto(ORIGEN + '/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await esperar('tarjeta-continuar', 20000);
+
+  const preguntaId = async () =>
+    (await page.locator('[data-testid^="pregunta-"]:visible').last().getAttribute('data-testid')).replace('pregunta-', '');
+  const responder = async (fallar) => {
+    const p = await preguntaId();
+    const c = R[p];
+    await pulsar('opcion-' + (fallar ? (c + 1) % 3 : c));
+    await pulsar('comprobar');
+    await esperar(fallar ? 'resultado-fallo' : 'resultado-acierto');
+    return p;
+  };
+  const sesion = async (fallarEn) => {
+    const falladas = [];
+    for (let i = 0; ; i++) {
+      const f = fallarEn.includes(i);
+      const p = await responder(f);
+      if (f) falladas.push(p);
+      const texto = await vis('continuar').innerText();
+      await pulsar('continuar');
+      if (texto.includes('Ver resumen')) break;
+    }
+    await esperar('resumen');
+    return falladas;
+  };
+
+  // Estado inicial
+  ok((await vis('estado-senales-1').innerText()) === 'Empezar', 'Inicio: primer nivel disponible');
+  ok((await vis('estado-senales-2').innerText()) === 'Bloqueado', 'Inicio: segundo nivel bloqueado');
+  await pulsar('tab-progreso');
+  await esperar('progreso-vacio');
+  ok(!(await page.getByText('%').count()), 'Progreso sin actividad: estado inicial sin porcentajes');
+  await pulsar('tab-inicio');
+  await pulsar('nivel-senales-2');
+  await esperar('dialogo');
+  ok((await vis('dialogo').innerText()).includes('Señales · Nivel 1'), 'Nivel bloqueado indica qué nivel falta');
+  await pulsar('dialogo-cancelar');
+
+  // Lección desde Inicio
+  await pulsar('continuar-leccion');
+  await esperar('sesion');
+  ok(!(await visible('tab-inicio')), 'Lección: barra de pestañas oculta');
+  ok(await vis('comprobar').isDisabled(), 'Lección: «Comprobar» desactivado sin opción elegida');
+  const primera = await responder(true);
+  ok((await vis('resultado-fallo').innerText()).includes('Respuesta correcta'), 'Fallo: muestra resultado, respuesta correcta y explicación');
+  await pulsar('ver-temario');
+  await esperar('pantalla-capitulo');
+  ok((await page.locator('[data-testid^="apartado-"]:visible').count()) > 0, 'Fallo: «Ver en el temario» abre el capítulo');
+  await atras();
+  await esperar('continuar');
+  ok((await vis('contador').innerText()) === '1/30', 'Al volver del temario la lección sigue en la misma pregunta');
+
+  // Cerrar y reabrir (se cierra la pestaña a mitad de lección y se abre otra)
+  const nueva = await page.context().newPage();
+  await page.close({ runBeforeUnload: false });
+  page = nueva;
+  await page.setViewportSize({ width: 412, height: 892 });
+  page.on('pageerror', (e) => errores.push(String(e)));
+  await page.goto(ORIGEN + '/');
+  await esperar('tarjeta-continuar', 20000);
+  await pulsar('abrir-errores');
+  await esperar('lista-pendientes');
+  ok(await visible('error-' + primera), 'Cerrar y reabrir: la pregunta fallada sigue en Pendientes');
+  await atras();
+
+  // Completar un nivel y desbloquear el siguiente
+  await pulsar('continuar-leccion');
+  await esperar('sesion');
+  const falladasN1 = await sesion([0]);
+  ok((await vis('resumen-titulo').innerText()) === 'Nivel completado', 'Nivel con 1 fallo: completado');
+  ok(await visible('desbloqueado'), 'Resumen: muestra el nivel desbloqueado');
+  await pulsar('volver-inicio');
+  await esperar('tarjeta-continuar');
+  ok((await vis('estado-senales-1').innerText()).startsWith('Completado'), 'Inicio: nivel 1 completado');
+  ok((await vis('estado-senales-2').innerText()) === 'Empezar', 'Inicio: nivel 2 desbloqueado');
+
+  // Repaso: acertar → Corregidas
+  await pulsar('abrir-errores');
+  await esperar('lista-pendientes');
+  const pendientes = await page.locator('[data-testid^="error-"]:visible').count();
+  await pulsar('repasar-errores');
+  await esperar('sesion');
+  ok(!(await visible('tab-inicio')), 'Repaso: barra de pestañas oculta');
+  for (let i = 0; i < pendientes; i++) {
+    await responder(false);
+    await pulsar('continuar');
+  }
+  await esperar('resumen');
+  await pulsar('volver-errores');
+  await esperar('pantalla-errores');
+  await pulsar('segmento-corregidas');
+  await esperar('lista-corregidas');
+  ok(await visible('error-' + falladasN1[0]), 'Acertada en el repaso: aparece en Corregidas');
+
+  // Volver a fallarla en otra sesión → Pendientes
+  await atras();
+  await esperar('tarjeta-continuar');
+  await pulsar('nivel-senales-1');
+  await esperar('sesion');
+  const refallo = await responder(true);
+  ok(refallo === falladasN1[0], 'Se repite el nivel completado y se vuelve a fallar la misma pregunta');
+  await atras();
+  await esperar('dialogo');
+  await pulsar('dialogo-confirmar');
+  await esperar('tarjeta-continuar');
+  ok((await vis('estado-senales-1').innerText()).startsWith('Completado'), 'Salir con confirmación; repetir no bloquea el nivel');
+  await pulsar('abrir-errores');
+  await esperar('lista-pendientes');
+  ok(await visible('error-' + refallo), 'Corregida que se vuelve a fallar: regresa a Pendientes');
+  await atras();
+
+  // Temario
+  await pulsar('tab-temario');
+  await esperar('pantalla-temario');
+  await pulsar('capitulo-prioridad');
+  await esperar('practicar-tema');
+  ok((await vis('practicar-detalle').innerText()).includes('Señales · Nivel 2'), 'Temario: tema bloqueado indica el nivel que falta');
+  ok((await vis('apartado-norma-general').innerText()).length > 200, 'Temario: el capítulo de demostración se puede leer');
+  await atras();
+  await pulsar('capitulo-senales');
+  await esperar('practicar-tema');
+  await pulsar('practicar-tema');
+  await esperar('sesion');
+  ok((await preguntaId()).startsWith('sen2-'), 'Temario: «Practicar este tema» abre la lección disponible');
+
+  // Nivel no superado
+  await sesion([0, 1, 2, 3]);
+  ok((await vis('resumen-titulo').innerText()) === 'Nivel no superado', 'Nivel con 4 fallos: no superado');
+  await pulsar('volver-inicio');
+  await esperar('tarjeta-continuar');
+  ok((await vis('estado-senales-2').innerText()) === 'Empezar', 'Nivel no superado: sigue disponible');
+  ok((await vis('estado-prioridad-1').innerText()) === 'Bloqueado', 'Nivel no superado: no desbloquea el siguiente');
+  await page.goto(ORIGEN + '/leccion/prioridad-1');
+  await esperar('leccion-bloqueada', 20000);
+  ok((await vis('leccion-bloqueada').innerText()).includes('Señales · Nivel 2'), 'Lección bloqueada abierta por URL: indica el nivel que falta');
+  await page.goto(ORIGEN + '/');
+  await esperar('tarjeta-continuar', 20000);
+
+  // Simulacro entregado
+  await pulsar('tab-simulador');
+  await esperar('empezar-simulacro');
+  await pulsar('empezar-simulacro');
+  await esperar('pantalla-simulacro');
+  ok(!(await visible('tab-inicio')), 'Simulacro: barra de pestañas oculta');
+  for (let i = 0; i < 6; i++) {
+    await pulsar('opcion-' + ((R[await preguntaId()] + 1) % 3));
+    if (i < 5) await pulsar('siguiente');
+  }
+  await pulsar('ir-pregunta-0');
+  const c0 = R[await preguntaId()];
+  await pulsar('opcion-' + c0);
+  ok((await vis('opcion-' + c0).getAttribute('aria-checked')) === 'true', 'Simulacro: se puede cambiar una respuesta antes de entregar');
+  await pulsar('entregar');
+  await esperar('dialogo');
+  await pulsar('dialogo-confirmar');
+  await esperar('pantalla-resultado');
+  ok((await vis('resultado-cifras').innerText()).startsWith('1 de 6'), 'Simulacro entregado: corrige con la respuesta cambiada (1/6)');
+  ok(!(await visible('tiempo-agotado')), 'Simulacro entregado: no marca tiempo agotado');
+
+  // Simulacro con tiempo agotado
+  await atras();
+  await esperar('empezar-simulacro');
+  await pulsar('empezar-simulacro');
+  await esperar('pantalla-simulacro');
+  await pulsar('opcion-' + R[await preguntaId()]);
+  await page.clock.fastForward('03:05');
+  await esperar('tiempo-agotado');
+  ok(await visible('tiempo-agotado'), 'Tiempo agotado: se corrige automáticamente');
+  ok((await vis('resultado-cifras').innerText()).startsWith('1 de 6'), 'Tiempo agotado: las no respondidas cuentan como fallo');
+
+  // Progreso
+  await pulsar('ver-progreso');
+  await esperar('pantalla-progreso');
+  ok((await id('tab-inicio').count()) === 1, 'Ver en Progreso vuelve a las pestañas existentes, sin duplicarlas');
+  ok(await visible('historial-1'), 'Progreso: historial con los dos simulacros');
+  ok((await vis('historial-0').innerText()).includes('Tiempo agotado'), 'Progreso: el último simulacro figura como tiempo agotado');
+  ok((await vis('lecciones-completadas').innerText()) === '1 de 6', 'Progreso: 1 lección completada');
+  const aciertos = Number((await vis('aciertos-senales').innerText()).split(' ')[0]);
+  const fallos = Number((await vis('fallos-senales').innerText()).split(' ')[0]);
+  ok(aciertos > 0 && fallos > 0, `Progreso: Señales con ${aciertos} aciertos y ${fallos} fallos`);
+
+  // Ajustes
+  await pulsar('tab-inicio');
+  await pulsar('abrir-ajustes');
+  await esperar('pantalla-ajustes');
+  ok(await visible('aviso-notificaciones'), 'Ajustes: avisa de que el envío de notificaciones está pendiente');
+  await pulsar('interruptor-recordatorios');
+  await pulsar('hora-mas');
+  await pulsar('minuto-mas');
+  await page.reload();
+  await esperar('pantalla-ajustes', 20000);
+  ok((await vis('estado-recordatorios').innerText()) === 'Activado', 'Ajustes: el interruptor se conserva al recargar');
+  ok((await vis('hora-guardada').innerText()) === 'Hora guardada: 20:15', 'Ajustes: la hora se conserva al recargar');
+  await page.goto(ORIGEN + '/progreso');
+  await esperar('pantalla-progreso', 20000);
+  ok(await visible('historial-1'), 'Tras recargar, Progreso conserva el historial');
+
+  ok(errores.length === 0, 'Sin errores de JavaScript' + (errores.length ? ': ' + errores.join(' | ') : ''));
+  return log.join('\n');
+}

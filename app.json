@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "A Ver si Arranca",
+    "slug": "a-ver-si-arranca",
+    "version": "0.1.0",
+    "scheme": "averssiarranca",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B0B0C",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B0B0C"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0B0B0C",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/favicon.png",
+      "backgroundColor": "#0B0B0C"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
